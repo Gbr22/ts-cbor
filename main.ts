@@ -1,4 +1,3 @@
-import { assertExists } from "@std/assert/exists";
 import { IterationControl } from "./iteration-control.ts";
 
 export const MajorType = Object.freeze({
@@ -129,69 +128,83 @@ function flushNumber(state: ReaderState) {
 	}
 }
 
-async function handleDecoderIterationData(state: ReaderState) {
-	if (state.mode == Mode.MajorType && state.majorType == MajorType.ByteString) {
-		if (state.byteArrayNumberOfBytesToRead <= 0) {
-			IterationControl.yield({
-				eventType: "end",
-				majorType: MajorType.ByteString,
-			});
-		}
-		const to = state.index + state.byteArrayNumberOfBytesToRead;
-		const slice = state.currentBuffer.slice(state.index, to);
-		state.index += state.byteArrayNumberOfBytesToRead;
-		IterationControl.yield({
-			eventType: "data",
-			majorType: MajorType.ByteString,
-			data: slice,
-		});
-	}
+async function handleReadDataItemFirstByte(state: ReaderState) {
 	const byte = state.currentBuffer[state.index];
 	state.index++;
-	if (state.mode == Mode.ExpectingDataItem) {
-		state.majorType = byte >>> 5;
-		state.mode = Mode.MajorType;
-		state.additionalInfo = byte & 0b00011111;
-		state.numberValue = 0;
-		if (state.additionalInfo < 24) {
-			state.numberOfBytesToRead = 0;
-			state.numberValue = state.additionalInfo;
-			flushNumber(state);
-		}
-		if (state.additionalInfo == 24) {
-			state.numberOfBytesToRead = 1;
-		}
-		if (state.additionalInfo == 25) {
-			state.numberOfBytesToRead = 2;
-		}
-		if (state.additionalInfo == 26) {
-			state.numberOfBytesToRead = 4;
-		}
-		if (state.additionalInfo == 27) {
-			state.numberValue = 0n;
-			state.numberOfBytesToRead = 8;
-		}
-		if ([28,29,30].includes(state.additionalInfo)) {
-			throw new Error("Reserved");
-		}
-		if (state.additionalInfo == 31) {
-			state.isIndefinite = true;
-			state.numberOfBytesToRead = 0;
-		}
-		if (state.isIndefinite && isNumerical(state.majorType)) {
-			throw new Error(`Ill-formed Data Item of Major Type ${state.majorType}`);
-		}
-	} else if (state.mode == Mode.MajorType && state.numberOfBytesToRead > 0) {
-		if (typeof state.numberValue == "bigint") {
-			state.numberValue = (state.numberValue << 8n) | BigInt(byte);
-		} else {
-			state.numberValue = (state.numberValue << 8) | byte;
-		}
-		
-		state.numberOfBytesToRead--;
-		if (state.numberOfBytesToRead == 0) {
-			flushNumber(state);
-		}
+	state.majorType = byte >>> 5;
+	state.mode = Mode.MajorType;
+	state.additionalInfo = byte & 0b00011111;
+	state.numberValue = 0;
+	if (state.additionalInfo < 24) {
+		state.numberOfBytesToRead = 0;
+		state.numberValue = state.additionalInfo;
+		flushNumber(state);
+	}
+	if (state.additionalInfo == 24) {
+		state.numberOfBytesToRead = 1;
+	}
+	if (state.additionalInfo == 25) {
+		state.numberOfBytesToRead = 2;
+	}
+	if (state.additionalInfo == 26) {
+		state.numberOfBytesToRead = 4;
+	}
+	if (state.additionalInfo == 27) {
+		state.numberValue = 0n;
+		state.numberOfBytesToRead = 8;
+	}
+	if ([28,29,30].includes(state.additionalInfo)) {
+		throw new Error("Reserved");
+	}
+	if (state.additionalInfo == 31) {
+		state.isIndefinite = true;
+		state.numberOfBytesToRead = 0;
+	}
+	if (state.isIndefinite && isNumerical(state.majorType)) {
+		throw new Error(`Ill-formed Data Item of Major Type ${state.majorType}`);
+	}
+}
+async function handleReadExtendedCount(state: ReaderState) {
+	const byte = state.currentBuffer[state.index];
+	state.index++;
+	if (typeof state.numberValue == "bigint") {
+		state.numberValue = (state.numberValue << 8n) | BigInt(byte);
+	} else {
+		state.numberValue = (state.numberValue << 8) | byte;
+	}
+	
+	state.numberOfBytesToRead--;
+	if (state.numberOfBytesToRead == 0) {
+		flushNumber(state);
+	}
+}
+
+async function handleByteStringData(state: ReaderState) {
+	if (state.byteArrayNumberOfBytesToRead <= 0) {
+		IterationControl.yield({
+			eventType: "end",
+			majorType: MajorType.ByteString,
+		});
+	}
+	const to = state.index + state.byteArrayNumberOfBytesToRead;
+	const slice = state.currentBuffer.slice(state.index, to);
+	state.index += state.byteArrayNumberOfBytesToRead;
+	IterationControl.yield({
+		eventType: "data",
+		majorType: MajorType.ByteString,
+		data: slice,
+	});
+}
+
+async function handleDecoderIterationData(state: ReaderState) {
+	if (state.mode == Mode.MajorType && state.majorType == MajorType.ByteString) {
+		await handleByteStringData(state);
+	}
+	else if (state.mode == Mode.ExpectingDataItem) {
+		await handleReadDataItemFirstByte(state);
+	}
+	else if (state.mode == Mode.MajorType && state.numberOfBytesToRead > 0) {
+		await handleReadExtendedCount(state);
 	}
 }
 
