@@ -61,7 +61,7 @@ export function flushHeaderAndArgument(state: ReaderState) {
 		state.mode = Mode.ReadingData;
 		state.byteArrayNumberOfBytesToRead = Number(state.numberValue);
 		if (state.numberValue > Number.MAX_SAFE_INTEGER) {
-			throw new Error("Array too large");
+			throw new Error(`Array too large. Size is ${state.numberValue} while Number.MAX_SAFE_INTEGER is ${Number.MAX_SAFE_INTEGER}`);
 		}
 		IterationControl.yield<StartEvent>({
 			eventType: "start",
@@ -77,7 +77,7 @@ export function flushHeaderAndArgument(state: ReaderState) {
 		state.unsafeTextSlice = new Uint8Array();
 		state.byteArrayNumberOfBytesToRead = Number(state.numberValue);
 		if (state.numberValue > Number.MAX_SAFE_INTEGER) {
-			throw new Error("String too large");
+			throw new Error(`String too large. Size is ${state.numberValue} while Number.MAX_SAFE_INTEGER is ${Number.MAX_SAFE_INTEGER}`);
 		}
 		IterationControl.yield<StartEvent>({
 			eventType: "start",
@@ -112,5 +112,5 @@ export function flushHeaderAndArgument(state: ReaderState) {
 			majorType: MajorType.Map,
 		});
 	}
-	throw new Error("Invalid major type");
+	throw new Error(`Unexpected major type ${state.majorType} while handling end of header/argument`);
 }

@@ -28,7 +28,6 @@ export class IterationControl<Yield, Exit> {
                 } catch(result) {
                     if (result instanceof IterationControl) {
                         if (result.type === "yield") {
-                            console.log("yield",result.value);
                             yield* result.value;
                         }
                         if (result.type === "return") {

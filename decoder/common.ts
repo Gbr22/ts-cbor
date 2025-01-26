@@ -35,6 +35,7 @@ export type ReaderState = {
     unsafeTextSlice: Uint8Array
     itemsToRead: (number | bigint)[]
     hierarchy: number[]
+    yieldQueue: DecoderEvent[]
 };
 
 export function createReaderState(reader: ReadableStreamDefaultReader<Uint8Array>): ReaderState {
@@ -55,5 +56,6 @@ export function createReaderState(reader: ReadableStreamDefaultReader<Uint8Array
         unsafeTextSlice: new Uint8Array(),
         itemsToRead: [],
         hierarchy: [],
+        yieldQueue: [],
     }
 }

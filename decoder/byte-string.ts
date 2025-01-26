@@ -13,7 +13,7 @@ export async function handleByteStringData(state: ReaderState) {
         });
     }
     if (state.isReaderDone) {
-        throw new Error(`Unexpected end of stream when ${state.byteArrayNumberOfBytesToRead} bytes are left to read`);
+        throw new Error(`Unexpected end of stream while trying to read ${state.byteArrayNumberOfBytesToRead} more bytes for text string`);
     }
     const to = state.index + state.byteArrayNumberOfBytesToRead;
     const slice = state.currentBuffer.slice(state.index, to);

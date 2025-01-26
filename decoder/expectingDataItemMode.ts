@@ -4,6 +4,7 @@ import { Mode, ReaderState, SubMode } from "./common.ts";
 import { EndEvent, StartEvent } from "./events.ts";
 import { flushHeaderAndArgument } from "./header.ts";
 import { yieldEndOfDataItem } from "./iterating.ts";
+import { serialize } from "../common.ts";
 
 const reservedAddionalInfo = Object.freeze([28,29,30]);
 export async function handleExpectingDataItemMode(state: ReaderState) {
@@ -40,7 +41,7 @@ export async function handleExpectingDataItemMode(state: ReaderState) {
     }
     state.argumentBytes = new Uint8Array(state.numberOfBytesToRead);
     if (reservedAddionalInfo.includes(state.additionalInfo)) {
-        throw new Error(`additionalInfo cannot be ${state.additionalInfo}`);
+        throw new Error(`AdditionalInfo cannot be ${state.additionalInfo}, reserved values are: ${serialize(reservedAddionalInfo)}`);
     }
     if (state.additionalInfo == AdditionalInfo.IndefiniteLength) {
         state.isIndefinite = true;
@@ -79,7 +80,6 @@ export async function handleExpectingDataItemMode(state: ReaderState) {
             }
             throw new Error(`Unexpected stop code`);
         }
-        console.log(state);
         throw new Error(`Major Type ${state.majorType} cannot be isIndefinite`);
     }
 }

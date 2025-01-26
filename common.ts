@@ -28,3 +28,20 @@ export const AdditionalInfo = Object.freeze({
 	Length8: 27,
 	IndefiniteLength: 31,
 });
+
+export function serialize(unknown: unknown) {
+	if (unknown === undefined) {
+		return "undefined";
+	}
+	if (unknown === null) {
+		return "null";
+	}
+	if (typeof unknown === "bigint") {
+		return `${unknown}n`;
+	}
+	try {
+		return JSON.stringify(unknown);
+	} catch (err) {
+		return `'${unknown}'`;
+	}
+}

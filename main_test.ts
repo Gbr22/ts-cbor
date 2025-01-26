@@ -75,7 +75,6 @@ async function assertRewrite(value: WritableValue) {
     await writeValue(writer,value);
     await writer.close();
     const bytes = getBytes();
-    console.log("bytes",bytes);
     const decoder = decoderFromStream(bytesToStream(bytes));
     const newValue = await parseDecoder(decoder);
     assertEquals(newValue, value, "Expect value to be rewritten correctly");
@@ -347,7 +346,7 @@ Deno.test(async function mapTest() {
 
 Deno.test(async function nestedCollectionsTest() {
     await assertRewrite(new Map<WritableValue,WritableValue>([
-        ["alma",["körte",5,[7,8,9]]],
+        ["alma",["körte",5,[7,8,9,10]]],
         [[2,9],"szilva"],
         [3,4],
     ]));

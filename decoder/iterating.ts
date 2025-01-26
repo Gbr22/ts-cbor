@@ -20,16 +20,25 @@ async function handleDecoderIterationData(state: ReaderState) {
 		await handleReadingArgumentMode(state);
 		return;
 	}
-	throw new Error(`Invalid mode ${state.mode}`);
+	throw new Error(`Unexpected mode ${state.mode} in ReaderState`);
+}
+
+function flushYieldQueue(state: ReaderState) {
+	if (state.yieldQueue.length > 0) {
+		const event = state.yieldQueue.pop()!;
+		IterationControl.yield<DecoderEvent>(event);
+	}
 }
 
 async function handleDecoderIteration(state: ReaderState) {
+	await flushYieldQueue(state);
 	await refreshBuffer(state);
 	await handleDecoderIterationData(state);
 }
 
 export function yieldEndOfDataItem<Event extends DecoderEvent>(state: ReaderState, event: Event): never {
-	IterationControl.yield<DecoderEvent>(event,...checkCollectionEnd(state));
+	checkCollectionEnd(state);
+	IterationControl.yield<DecoderEvent>(event);
 }
 
 export function decoderFromStream(stream: ReadableStream<Uint8Array>) {

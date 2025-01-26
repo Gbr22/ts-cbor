@@ -6,6 +6,7 @@ import { Decoder } from "./common.ts";
 import { decodeNumberEvent, isNumberEvent } from "./numbers.ts";
 import { decodeSimpleValue, isSimpleValueEvent } from "./simple-value.ts";
 import { consumeTextString } from "./text-string.ts";
+import { serialize } from "../common.ts";
 
 export async function* transformDecoder(decoder: Decoder): AsyncIterableIterator<ReadableValue> {
     for await (const event of decoder.events()) {
@@ -26,6 +27,7 @@ export async function* transformDecoder(decoder: Decoder): AsyncIterableIterator
                 values.push(item);
             }
             yield values;
+            continue;
         }
         if (event.eventType === "start" && event.majorType === MajorType.Map) {
             const values = new Map();
@@ -41,6 +43,7 @@ export async function* transformDecoder(decoder: Decoder): AsyncIterableIterator
                 values.set(key, item);
             }
             yield values;
+            continue;
         }
         if (event.eventType === "start" && event.majorType === MajorType.ByteString) {
             const it = await consumeByteString(decoder);
@@ -63,7 +66,7 @@ export async function parseDecoder<T>(decoder: Decoder): Promise<T> {
     let value: unknown;
     for await (const item of transformDecoder(decoder)) {
         if (hasValue) {
-            throw new Error(`Unexpected item; end of stream expected. Item: ${String(item)}`);
+            throw new Error(`Unexpected item; end of stream expected. Item is: ${serialize(item)}`);
         }
         value = item;
         hasValue = true;
