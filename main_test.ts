@@ -1,6 +1,8 @@
 import { assertEquals } from "@std/assert";
 import { consumeByteString, decoderFromStream, LiteralEvent } from "./main.ts";
 import { MajorType } from "./main.ts";
+import { encoderFromStream } from "./encoder.ts";
+import { parseDecoder } from "./decoder.ts";
 
 async function collect(stream: AsyncIterable<Uint8Array>) {
     const reader = stream[Symbol.asyncIterator]();
@@ -39,9 +41,8 @@ function iterableToStream<T>(it: Iterable<T>) {
         }
     });
 }
-function byteStringToStream(str: string, bufferSize: number = 5) {
-    const bytes = new Uint8Array(str.length);
-    bytes.set(str.split("").map(c => c.charCodeAt(0)));
+
+function bytesToStream(bytes: Uint8Array, bufferSize: number = 5) {
     const count = bytes.length / bufferSize;
     const it = function*() {
         for (let i = 0; i < count; i++) {
@@ -49,6 +50,27 @@ function byteStringToStream(str: string, bufferSize: number = 5) {
         }
     }();
     return iterableToStream(it);
+}
+
+function byteStringToStream(str: string, bufferSize: number = 5) {
+    const bytes = new Uint8Array(str.length);
+    bytes.set(str.split("").map(c => c.charCodeAt(0)));
+    return bytesToStream(bytes, bufferSize);
+}
+function byteWritableStream() {
+    const bytes: Uint8Array[] = [];
+    return {
+        getBytes() {
+            return joinBytes(...bytes);
+        },
+        stream: new WritableStream({
+            async write(value: Uint8Array) {
+                bytes.push(value);
+            },
+            async close() {
+            }
+        })
+    }
 }
 
 function stripWhitespace(s: string) {
@@ -94,6 +116,17 @@ async function assertNext<T>(iterator: AsyncIterableIterator<T>): Promise<T> {
     return value;
 }
 
+async function assertRewrite(value: number | bigint) {
+    const { getBytes, stream } = byteWritableStream();
+    const encoder = encoderFromStream(stream);
+    await encoder.writePrimitive(value);
+    await encoder.close();
+    const bytes = getBytes();
+    const decoder = decoderFromStream(bytesToStream(bytes));
+    const newValue = await parseDecoder(decoder);
+    assertEquals(newValue, value, "Expect value to be rewritten correctly");
+}
+
 async function literalTest(bytes: string, value: unknown, majorType: number) {
     const decoder = decoderFromStream(byteStringToStream(bytes));
     const iterator = decoder[Symbol.asyncIterator]();
@@ -136,4 +169,26 @@ Deno.test(async function byteString() {
     assertEquals(next.majorType, MajorType.ByteString, "Expect correct major type");
     const bytes = await collectBytes(consumeByteString(iterator));
     assertEquals(bytes, byteArray, "Expect correct value");
+});
+
+Deno.test(async function positiveNumberIdentity() {
+    await assertRewrite(0);
+    await assertRewrite(0xFF);
+    await assertRewrite(0xFF+1);
+    await assertRewrite(0xFFFF);
+    await assertRewrite(0xFFFF+1);
+    await assertRewrite(0xFFFF_FFFF);
+    await assertRewrite(0xFFFF_FFFFn+1n);
+    await assertRewrite(0xFFFF_FFFF_FFFF_FFFFn);
+});
+
+Deno.test(async function negativeNumberIdentity() {
+    await assertRewrite(-0);
+    await assertRewrite(-0xFF);
+    await assertRewrite(-0xFF-2);
+    await assertRewrite(-0xFFFF);
+    await assertRewrite(-0xFFFF-2);
+    await assertRewrite(-0xFFFF_FFFF);
+    await assertRewrite(-0xFFFF_FFFFn-2n);
+    await assertRewrite(-0xFFFF_FFFF_FFFF_FFFFn);
 });
