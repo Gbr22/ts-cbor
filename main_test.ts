@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert";
-import { consumeByteString, decoderFromStream, LiteralEvent } from "./main.ts";
+import { consumeByteString, Decoder, DecoderEvent, decoderFromStream, LiteralEvent } from "./main.ts";
 import { MajorType } from "./main.ts";
 import { writeByteStream, writePrimitive } from "./encoder.ts";
 import { parseDecoder } from "./decoder.ts";
@@ -68,6 +68,10 @@ async function assertNext<T>(iterator: AsyncIterableIterator<T>): Promise<T> {
     return value;
 }
 
+async function assertDecoderNext(decoder: Decoder): Promise<DecoderEvent> {
+    return await assertNext(decoder.events());
+}
+
 async function assertRewrite(value: number | bigint | Uint8Array | boolean | null | undefined) {
     const { getBytes, stream } = byteWritableStream();
     const writer = stream.getWriter();
@@ -81,8 +85,7 @@ async function assertRewrite(value: number | bigint | Uint8Array | boolean | nul
 
 async function literalTest(bytes: string, value: unknown, majorType: number) {
     const decoder = decoderFromStream(byteStringToStream(bytes));
-    const iterator = decoder[Symbol.asyncIterator]();
-    const next = await assertNext(iterator);
+    const next = await assertDecoderNext(decoder);
     assertEquals(next.eventType, "literal", "Expect literal event");
     assertEquals(next.majorType, majorType, "Expect correct major type");
     assertEquals((next as LiteralEvent).data, value, "Expect correct value");
@@ -115,11 +118,11 @@ Deno.test(async function numberTest() {
 Deno.test(async function byteString() {
     const byteArray = new Uint8Array([1,2,3,4,5]);
     const decoder = decoderFromStream(byteStringToStream(concat`${b`010 00101`}${byteArray}`));
-    const iterator = decoder[Symbol.asyncIterator]();
+    const iterator = decoder.events();
     const next = await assertNext(iterator);
     assertEquals(next.eventType, "start", "Expect start event");
     assertEquals(next.majorType, MajorType.ByteString, "Expect correct major type");
-    const bytes = await collectBytes(consumeByteString(iterator));
+    const bytes = await collectBytes(consumeByteString(decoder));
     assertEquals(bytes, byteArray, "Expect correct value");
 });
 
@@ -211,7 +214,7 @@ Deno.test(async function byteStreamWriteReadTest() {
     await writeByteStream(writer,stream);
     const writeResult = await getBytes();
     const decoder = decoderFromStream(bytesToStream(writeResult));
-    const next = await assertNext(await decoder[Symbol.asyncIterator]())
+    const next = await assertNext(decoder.events())
     assertEquals(next.eventType, "start", "Expect start event");
     const readResult = await collectBytes(consumeByteString(decoder));
 

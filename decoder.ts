@@ -3,8 +3,10 @@ import { DecoderEvent } from "./events.ts";
 import { IterationControl } from "./iteration-control.ts";
 import { collectBytes } from "./utils.ts";
 
+export type DecoderEvents = AsyncIterableIterator<DecoderEvent>;
+
 export interface Decoder {
-	[Symbol.asyncIterator](): AsyncIterator<DecoderEvent>;
+	events(): DecoderEvents;
 }
 
 const Mode = Object.freeze({
@@ -21,7 +23,7 @@ const SubMode = Object.freeze({
 export async function* consumeByteString(decoder: Decoder): AsyncIterableIterator<Uint8Array,void,void> {
 	let counter = 1;
 
-	for await (const value of decoder) {
+	for await (const value of decoder.events()) {
 		if (value.majorType != MajorType.ByteString) {
 			throw new Error(`Unexpected major type ${value.majorType} while reading byte string`);
 		}
@@ -45,7 +47,7 @@ export async function parseDecoder<T>(decoder: Decoder): Promise<T> {
 	let rootObject;
 	let currentObject;
 	
-	for await (const event of decoder) {
+	for await (const event of decoder.events()) {
 		if (event.eventType === "literal") {
 			return event.data as T;
 		}
@@ -309,11 +311,12 @@ export function decoderFromStream(stream: ReadableStream<Uint8Array>) {
 	const reader = stream.getReader();
 	const state = createReaderState(reader);
 
-	return {
-		[Symbol.asyncIterator]() {
-			return IterationControl.createIterator<DecoderEvent>(async () => {
-				await handleDecoderIteration(state);
-			});
-		}
+	function events() {
+		return IterationControl.createIterator<DecoderEvent>(async () => {
+			await handleDecoderIteration(state);
+		})[Symbol.asyncIterator]();
 	}
+	return {
+		events,
+	}	
 }
