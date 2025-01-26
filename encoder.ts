@@ -56,7 +56,20 @@ export async function writeArgument(writer: Writer, majorType: number, number: n
     throw new Error(`Number too large: ${number}`);
 }
 
-export async function writePrimitive(writer: Writer, value: number | bigint | Uint8Array | boolean | null | undefined) {
+export async function writeByteString(writer: Writer, value: Uint8Array) {
+    await writeArgument(writer, MajorType.ByteString, value.byteLength);
+    await writer.write(value);
+}
+
+export async function writeByteStream(writer: Writer, stream: ReadableStream<Uint8Array>) {
+    await writeHeader(writer, MajorType.ByteString, 31);
+    for await (const value of stream) {
+        await writeByteString(writer, value);
+    }
+    await writeHeader(writer, MajorType.SimpleValue, 31);
+}
+
+export async function writePrimitive(writer: Writer, value: number | bigint | Uint8Array | ReadableStream<Uint8Array> | boolean | null | undefined) {
     if (typeof value === "number" || typeof value === "bigint") {
         let newValue = value;
         if (newValue < 0) {
@@ -72,8 +85,11 @@ export async function writePrimitive(writer: Writer, value: number | bigint | Ui
         return;
     }
     if (value instanceof Uint8Array) {
-        await writeArgument(writer, MajorType.ByteString, value.byteLength);
-        await writer.write(value);
+        await writeByteString(writer, value);
+        return;
+    }
+    if (value instanceof ReadableStream) {
+        await writeByteStream(writer, value);
         return;
     }
     if (value === false) {

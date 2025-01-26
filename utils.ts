@@ -47,10 +47,14 @@ export function bytesToStream(bytes: Uint8Array, bufferSize: number = 5) {
     return iterableToStream(it);
 }
 
-export function byteStringToStream(str: string, bufferSize: number = 5) {
+export function stringToBytes(str: string) {
     const bytes = new Uint8Array(str.length);
     bytes.set(str.split("").map(c => c.charCodeAt(0)));
-    return bytesToStream(bytes, bufferSize);
+    return bytes;
+}
+
+export function byteStringToStream(str: string, bufferSize: number = 5) {
+    return bytesToStream(stringToBytes(str), bufferSize);
 }
 export function byteWritableStream() {
     const bytes: Uint8Array[] = [];

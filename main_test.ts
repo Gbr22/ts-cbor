@@ -1,9 +1,9 @@
 import { assertEquals } from "@std/assert";
 import { consumeByteString, decoderFromStream, LiteralEvent } from "./main.ts";
 import { MajorType } from "./main.ts";
-import { writePrimitive } from "./encoder.ts";
+import { writeByteStream, writePrimitive } from "./encoder.ts";
 import { parseDecoder } from "./decoder.ts";
-import { bytesToStream, byteStringToStream, byteWritableStream, collectBytes } from "./utils.ts";
+import { bytesToStream, byteStringToStream, byteWritableStream, collectBytes, iterableToStream, stringToBytes } from "./utils.ts";
 
 function stripWhitespace(s: string) {
     return s.replaceAll(/\s/g,"");
@@ -28,7 +28,27 @@ function concat(templateStringsArray: TemplateStringsArray, ...expr: (Uint8Array
 
 function hex(input: TemplateStringsArray, ..._: unknown[]) {
     let newString = "";
-    const hex = stripWhitespace(input.join());
+    const inputString = input.join();
+    const inputChars = inputString.split("");
+    let isComment = false;
+    let hex = "";
+    while (inputChars.length > 0) {
+        const char = inputChars.shift();
+        if (char === "#") {
+            isComment = true;
+        }
+        if (isComment) {
+            if (char === "\n") {
+                isComment = false;
+            }
+            continue;
+        }
+        if (char === " " || char === "\n" || char == "\t") {
+            continue;
+        }
+        hex += char;
+    }
+
     for (let i=0; i < hex.length; i+=2) {
         const hexByte = hex.substring(i,i+2).padEnd(2,"0");
         const byte = parseInt(hexByte,16);
@@ -153,4 +173,28 @@ Deno.test(async function simpleTypeIdentity() {
         }
         await assertRewrite(i);
     }
+});
+
+Deno.test(async function byteStreamWriteTest() {
+    const chunks = [
+        new Uint8Array([1,2,3]),
+        new Uint8Array([4,5,6]),
+        new Uint8Array([7,8,9]),
+    ];
+    const stream: ReadableStream<Uint8Array> = iterableToStream(chunks);
+    const { getBytes, stream: writerStream } = byteWritableStream();
+    const writer = writerStream.getWriter();
+    await writeByteStream(writer,stream);
+    const result = await getBytes();
+    const expected = stringToBytes(hex`
+        5F         # bytes(*)
+        43         # bytes(3)
+            010203 # "\u0001\u0002\u0003"
+        43         # bytes(3)
+            040506 # "\u0004\u0005\u0006"
+        43         # bytes(3)
+            070809 # "\u0007\b\t"
+        FF         # primitive(*)
+    `);
+    assertEquals(result,expected, "Expect correct byte stream");
 });
