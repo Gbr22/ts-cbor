@@ -29,7 +29,7 @@ export type ReaderState = {
 	additionalInfo: number
 	numberOfBytesToRead: number
 	numberValue: number | bigint
-	argumentBytes: number[]
+	argumentBytes: Uint8Array
 	isIndefinite: boolean
 	byteArrayNumberOfBytesToRead: number
     unsafeTextSlice: Uint8Array
@@ -47,7 +47,7 @@ export function createReaderState(reader: ReadableStreamDefaultReader<Uint8Array
         additionalInfo: NaN,
         numberOfBytesToRead: 0,
         numberValue: 0,
-        argumentBytes: [],
+        argumentBytes: new Uint8Array(),
         isIndefinite: false,
         byteArrayNumberOfBytesToRead: 0,
         unsafeTextSlice: new Uint8Array(),

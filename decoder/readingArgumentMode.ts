@@ -8,13 +8,7 @@ export async function handleReadingArgumentMode(state: ReaderState) {
     const byte = state.currentBuffer[state.index];
     state.index++;
 
-    state.argumentBytes.push(byte);
-
-    if (typeof state.numberValue == "bigint") {
-        state.numberValue = (state.numberValue << 8n) | BigInt(byte);
-    } else {
-        state.numberValue = ((state.numberValue << 8) | byte) >>> 0;
-    }
+    state.argumentBytes[state.argumentBytes.length-state.numberOfBytesToRead] = byte;
     
     state.numberOfBytesToRead--;
     if (state.numberOfBytesToRead == 0) {

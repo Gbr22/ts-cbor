@@ -1,31 +1,36 @@
 import { MajorType } from "../common.ts";
 
-export type LiteralEvent = IntegerLiteralEvent | SimpleValueLiteralEvent | FloatLiteralEvent;
+export type LiteralEvent = IntegerLiteralEvent | SimpleValueLiteralEvent | FloatLiteralEvent | TagLiteralEvent;
+export type TagLiteralEvent = {
+    eventType: "literal",
+    majorType: typeof MajorType["Tag"],
+    data: Uint8Array
+};
 export type SimpleValueLiteralEvent = {
     eventType: "literal"
     majorType: typeof MajorType["SimpleValue"]
-    numberValue: number
+    simpleValueType: "simple"
     data: number
 };
 export type FloatLiteralEvent = {
     eventType: "literal"
     majorType: typeof MajorType["SimpleValue"]
-    bytes: number[]
-    data: number
+    simpleValueType: "float"
+    data: Uint8Array
 }
 export type IntegerLiteralEvent = {
     eventType: "literal",
     majorType: typeof MajorType["NegativeInteger"] | typeof MajorType["UnsignedInteger"] | typeof MajorType["Tag"];
-    data: number | bigint;
+    data: Uint8Array;
 };
 export type StartEvent = {
     eventType: "start",
     length: number | undefined,
-    majorType: typeof MajorType["ByteString"] | typeof MajorType["TextString"],
+    majorType: typeof MajorType["ByteString"] | typeof MajorType["TextString"] | typeof MajorType["Array"] | typeof MajorType["Map"],
 };
 export type EndEvent = {
     eventType: "end",
-    majorType: typeof MajorType["ByteString"] | typeof MajorType["TextString"],
+    majorType: typeof MajorType["ByteString"] | typeof MajorType["TextString"] | typeof MajorType["Array"] | typeof MajorType["Map"],
 };
 export type DataEvent = {
     eventType: "data",
@@ -38,3 +43,4 @@ export type DataEvent = {
 };
 
 export type DecoderEvent = LiteralEvent | StartEvent | EndEvent | DataEvent;
+export type NumberEvent = IntegerLiteralEvent | FloatLiteralEvent;

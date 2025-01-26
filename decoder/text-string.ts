@@ -1,6 +1,7 @@
 import { MajorType } from "../common.ts";
 import { IterationControl } from "../iteration-control.ts";
 import { Decoder, Mode, ReaderState } from "./common.ts";
+import { DataEvent, EndEvent } from "./events.ts";
 
 const utf8LengthMapping = [
 //   Expected     Mask         Length
@@ -19,7 +20,7 @@ export async function handleTextStringData(state: ReaderState) {
         if (state.unsafeTextSlice.length > 0) {
             throw new Error(`Expected continuation of text string due to presence of incomplete UTF-8 sequence: ${JSON.stringify([...state.unsafeTextSlice])}`);
         }
-        IterationControl.yield({
+        IterationControl.yield<EndEvent>({
             eventType: "end",
             majorType: MajorType.TextString,
         });
@@ -71,7 +72,7 @@ export async function handleTextStringData(state: ReaderState) {
             }
         }
 
-        IterationControl.yield({
+        IterationControl.yield<DataEvent>({
             eventType: "data",
             majorType: MajorType.TextString,
             data: new TextDecoder('UTF-8', { "fatal": true }).decode(safeSlice),
@@ -99,5 +100,5 @@ export async function* consumeTextString(decoder: Decoder): AsyncIterableIterato
             yield value.data;
         }
     }
-    throw new Error(`Unexpected end of stream counter: ${counter}`);
+    throw new Error(`Unexpected end of stream. Depth counter: ${counter}`);
 }

@@ -1,77 +1,83 @@
-import { isNumerical, MajorType } from "../common.ts";
+import { isIntegerMajorType, MajorType } from "../common.ts";
 import { IterationControl } from "../iteration-control.ts";
+import { SimpleValueLiteralEvent } from "../main.ts";
 import { Mode, ReaderState } from "./common.ts";
+import { FloatLiteralEvent, IntegerLiteralEvent, StartEvent, TagLiteralEvent } from "./events.ts";
+import { decodeUint } from "./numbers.ts";
 
 export function flushHeaderAndArgument(state: ReaderState) {
-	if (isNumerical(state.majorType)) {
+	if (isIntegerMajorType(state.majorType)) {
 		state.mode = Mode.ExpectingDataItem;
-		if (state.majorType === MajorType.NegativeInteger) {
-			if (typeof state.numberValue === "bigint") {
-				state.numberValue = (state.numberValue * -1n) -1n;
-			} else {
-				state.numberValue = (state.numberValue * -1) -1;
+		if (state.majorType === MajorType.Tag) {
+			if (state.argumentBytes.length > 0) {
+				state.numberValue = decodeUint(state.argumentBytes);
 			}
+			IterationControl.yield<TagLiteralEvent>({
+				eventType: "literal",
+				majorType: MajorType.Tag,
+				data: state.argumentBytes,
+			});
 		}
-		IterationControl.yield({
+		let array = state.argumentBytes;
+		if (array.length <= 0) {
+			array = new Uint8Array([state.additionalInfo]);
+		}
+		IterationControl.yield<IntegerLiteralEvent>({
 			eventType: "literal",
-			majorType: state.majorType,
-			data: state.numberValue,
+			majorType: state.majorType as IntegerLiteralEvent["majorType"],
+			data: array,
 		});
 	}
 	if (state.majorType == MajorType.SimpleValue) {
 		if (state.additionalInfo >= 25 && state.additionalInfo <= 27) {
-			// TODO: Implement float
-			IterationControl.yield({
+			IterationControl.yield<FloatLiteralEvent>({
 				eventType: "literal",
+				simpleValueType: "float",
 				majorType: MajorType.SimpleValue,
-				bytes: state.argumentBytes,
-				data: state.numberValue,
-			})
+				data: state.argumentBytes,
+			});
+		}
+		if (state.argumentBytes.length > 0) {
+			state.numberValue = decodeUint(state.argumentBytes);
 		}
 		let numberValue = state.additionalInfo;
 		if (state.argumentBytes.length > 0) {
 			numberValue = state.argumentBytes[0];
 		}
-		let value: number | false | true | null | undefined = Number(numberValue);
-		if (numberValue == 20) {
-			value = false;
-		}
-		if (numberValue == 21) {
-			value = true;
-		}
-		if (numberValue == 22) {
-			value = null;
-		}
-		if (numberValue == 23) {
-			value = undefined;
-		}
-		IterationControl.yield({
+		
+		IterationControl.yield<SimpleValueLiteralEvent>({
 			eventType: "literal",
 			majorType: MajorType.SimpleValue,
-			numberValue: numberValue,
-			data: value,
+			simpleValueType: "simple",
+			data: numberValue,
 		});
 	}
 	if (state.majorType == MajorType.ByteString) {
+		if (state.argumentBytes.length > 0) {
+			state.numberValue = decodeUint(state.argumentBytes);
+		}
 		state.mode = Mode.ReadingData;
 		state.byteArrayNumberOfBytesToRead = Number(state.numberValue);
 		if (state.numberValue > Number.MAX_SAFE_INTEGER) {
 			throw new Error("Array too large");
 		}
-		IterationControl.yield({
+		IterationControl.yield<StartEvent>({
 			eventType: "start",
 			length: state.byteArrayNumberOfBytesToRead,
 			majorType: MajorType.ByteString,
 		});
 	}
 	if (state.majorType == MajorType.TextString) {
+		if (state.argumentBytes.length > 0) {
+			state.numberValue = decodeUint(state.argumentBytes);
+		}
 		state.mode = Mode.ReadingData;
 		state.unsafeTextSlice = new Uint8Array();
 		state.byteArrayNumberOfBytesToRead = Number(state.numberValue);
 		if (state.numberValue > Number.MAX_SAFE_INTEGER) {
 			throw new Error("String too large");
 		}
-		IterationControl.yield({
+		IterationControl.yield<StartEvent>({
 			eventType: "start",
 			length: state.byteArrayNumberOfBytesToRead,
 			majorType: MajorType.TextString,

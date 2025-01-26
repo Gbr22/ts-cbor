@@ -19,6 +19,17 @@ export async function writeHeader(writer: Writer, majorType: number, additionalI
     header[0] = (majorType << 5) | additionalInfo;
     await writer.write(header);
 }
+export async function writeSimpleValue(writer: Writer, value: number) {
+    if (value <= 31) {
+        await writeHeader(writer, MajorType.SimpleValue, value);
+        return;
+    }
+    await writeHeader(writer, MajorType.SimpleValue, 24);
+    await writer.write(new Uint8Array([value]));
+}
+export async function writeBreak(writer: Writer) {
+    await writeHeader(writer, MajorType.SimpleValue, 31);
+}
 export async function writeArgument(writer: Writer, majorType: number, number: number | bigint) {
     if (number < 0) {
         throw new Error("Number must be positive");
@@ -66,7 +77,7 @@ export async function writeByteStream(writer: Writer, stream: ReadableStream<Uin
     for await (const value of stream) {
         await writeByteString(writer, value);
     }
-    await writeHeader(writer, MajorType.SimpleValue, 31);
+    await writeBreak(writer);
 }
 
 export async function writeTextString(writer: Writer, value: string) {
@@ -80,7 +91,7 @@ export async function writeTextStream(writer: Writer, stream: ReadableStream<str
     for await (const value of stream) {
         await writeTextString(writer, value);
     }
-    await writeHeader(writer, MajorType.SimpleValue, 31);
+    await writeBreak(writer);
 }
 
 export async function writeNumber(writer: Writer, value: number | bigint) {
@@ -95,6 +106,20 @@ export async function writeNumber(writer: Writer, value: number | bigint) {
     }
     const type = value < 0 ? MajorType.NegativeInteger : MajorType.UnsignedInteger;
     await writeArgument(writer, type, newValue);
+}
+
+export async function writeFloat16(writer: Writer, value: number | Float16Array) {
+    let floatArray;
+    if (value instanceof Float16Array) {
+        floatArray = value;
+    } else {
+        floatArray = new Float16Array(1);
+        floatArray[0] = value;
+    }
+    new DataView(floatArray.buffer).setFloat16;
+    const buffer = new Uint8Array(floatArray.buffer);
+    await writeArgument(writer, MajorType.SimpleValue, 25);
+    await writer.write(buffer);
 }
 
 export async function writePrimitive(writer: Writer, value: number | bigint | Uint8Array | ReadableStream<Uint8Array> | boolean | null | undefined | string) {

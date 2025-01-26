@@ -1,4 +1,13 @@
 export {
+	decodeSimpleValue,
+	isSimpleValueEvent,
+	UnknownSimpleValue,
+} from "./decoder/simple-value.ts";
+export {
+	decodeUint,
+	decodeFloat,
+} from "./decoder/numbers.ts";
+export {
 	writeByteStream,
 	writeByteString,
 	writeTextStream,
@@ -11,6 +20,7 @@ export {
 	writeNumber,
 	writeArgument,
 	writeHeader,
+	writeBreak,
 } from "./encoder.ts";
 export {
 	parseDecoder
@@ -35,6 +45,7 @@ export {
 	type StartEvent,
 	type EndEvent,
 	type DataEvent,
+	type NumberEvent,
 } from "./decoder/events.ts";
 export {
 	MajorType,

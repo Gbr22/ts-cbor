@@ -8,7 +8,7 @@ export class IterationControl<Yield, Exit> {
         this.value = value;
     }
 
-    static yield<Yield, Exit>(value: Yield): never {
+    static yield<Yield, Exit = void>(value: Yield): never {
         throw new IterationControl<Yield, Exit>("yield", value);
     }
     static return<Yeild, Exit>(): never
@@ -21,7 +21,7 @@ export class IterationControl<Yield, Exit> {
     }
 
     static createIterator<Yield, Return = void>(iterate: ()=>Promise<void>): AsyncIterableIterator<Yield,Return,void> {
-         async function* generator(): AsyncIterableIterator<Yield,Return,void> {
+        async function* generator(): AsyncIterableIterator<Yield,Return,void> {
             while (true) {
                 try {
                     await iterate();

@@ -1,11 +1,12 @@
 import { MajorType } from "../common.ts";
 import { IterationControl } from "../iteration-control.ts";
 import { Decoder, Mode, ReaderState } from "./common.ts";
+import { DataEvent, EndEvent } from "./events.ts";
 
 export async function handleByteStringData(state: ReaderState) {
     if (state.byteArrayNumberOfBytesToRead <= 0) {
         state.mode = Mode.ExpectingDataItem;
-        IterationControl.yield({
+        IterationControl.yield<EndEvent>({
             eventType: "end",
             majorType: MajorType.ByteString,
         });
@@ -18,7 +19,7 @@ export async function handleByteStringData(state: ReaderState) {
     state.index += state.byteArrayNumberOfBytesToRead;
     state.byteArrayNumberOfBytesToRead -= slice.length;
     if (slice.length > 0) {
-        IterationControl.yield({
+        IterationControl.yield<DataEvent>({
             eventType: "data",
             majorType: MajorType.ByteString,
             data: slice,
@@ -46,5 +47,5 @@ export async function* consumeByteString(decoder: Decoder): AsyncIterableIterato
             yield value.data;
         }
     }
-    throw new Error(`Unexpected end of stream counter: ${counter}`);
+    throw new Error(`Unexpected end of stream. Depth counter: ${counter}`);
 }

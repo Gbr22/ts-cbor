@@ -1,8 +1,8 @@
 import { assertEquals } from "@std/assert";
-import { consumeByteString, Decoder, DecoderEvent, decoderFromStream, LiteralEvent, writeByteStream, writePrimitive, writeTextStream } from "./main.ts";
-import { MajorType, parseDecoder } from "./main.ts";
+import { MajorType, parseDecoder, consumeByteString, decoderFromStream, SimpleValueLiteralEvent, writeByteStream, writePrimitive, writeTextStream } from "./main.ts";
 import { bytesToStream, byteStringToStream, byteWritableStream, collect, collectBytes, iterableToStream, joinBytes, stringToBytes } from "./utils.ts";
 import { consumeTextString } from "./decoder/text-string.ts";
+import { writeSimpleValue } from "./encoder.ts";
 
 function stripWhitespace(s: string) {
     return s.replaceAll(/\s/g,"");
@@ -67,10 +67,6 @@ async function assertNext<T>(iterator: AsyncIterableIterator<T>): Promise<T> {
     return value;
 }
 
-async function assertDecoderNext(decoder: Decoder): Promise<DecoderEvent> {
-    return await assertNext(decoder.events());
-}
-
 async function assertRewrite(value: number | bigint | Uint8Array | boolean | null | undefined | string) {
     const { getBytes, stream } = byteWritableStream();
     const writer = stream.getWriter();
@@ -82,36 +78,34 @@ async function assertRewrite(value: number | bigint | Uint8Array | boolean | nul
     assertEquals(newValue, value, "Expect value to be rewritten correctly");
 }
 
-async function literalTest(bytes: string, value: unknown, majorType: number) {
+async function literalTest(bytes: string, value: unknown) {
     const decoder = decoderFromStream(byteStringToStream(bytes));
-    const next = await assertDecoderNext(decoder);
-    assertEquals(next.eventType, "literal", "Expect literal event");
-    assertEquals(next.majorType, majorType, "Expect correct major type");
-    assertEquals((next as LiteralEvent).data, value, "Expect correct value");
+    const result = await parseDecoder(decoder);
+    assertEquals(result, value, "Expect correct value");
 }
 
 Deno.test(async function oneBytePositiveIntTest() {
     // Integers between [0; 23] are encoded as as themselves
     for (let i=0; i < 24; i++) {
-        await literalTest(String.fromCharCode(i), i, MajorType.UnsignedInteger);
+        await literalTest(String.fromCharCode(i), i);
     }
 });
 
 Deno.test(async function oneByteNegativeTest() {
-    await literalTest(hex`20`,-1,MajorType.NegativeInteger);
-    await literalTest(hex`2C`,-13,MajorType.NegativeInteger);
-    await literalTest(hex`37`,-24,MajorType.NegativeInteger);
+    await literalTest(hex`20`,-1);
+    await literalTest(hex`2C`,-13);
+    await literalTest(hex`37`,-24);
 });
 
 Deno.test(async function numberTest() {
-    await literalTest(hex`18 7B`,123,MajorType.UnsignedInteger);
-    await literalTest(hex`38 7A`,-123,MajorType.NegativeInteger);
-    await literalTest(hex`19 3039`,12345,MajorType.UnsignedInteger);
-    await literalTest(hex`39 3038`,-12345,MajorType.NegativeInteger);
-    await literalTest(hex`1A 00FFE8A2`,16771234,MajorType.UnsignedInteger);
-    await literalTest(hex`3A 00FFE8A1`,-16771234,MajorType.NegativeInteger);
-    await literalTest(hex`1B 01B69B4BACD05F15`,123456789123456789n,MajorType.UnsignedInteger);
-    await literalTest(hex`3B 01B69B4BACD05F14`,-123456789123456789n,MajorType.NegativeInteger);
+    await literalTest(hex`18 7B`,123);
+    await literalTest(hex`38 7A`,-123);
+    await literalTest(hex`19 3039`,12345);
+    await literalTest(hex`39 3038`,-12345);
+    await literalTest(hex`1A 00FFE8A2`,16771234);
+    await literalTest(hex`3A 00FFE8A1`,-16771234);
+    await literalTest(hex`1B 01B69B4BACD05F15`,123456789123456789n);
+    await literalTest(hex`3B 01B69B4BACD05F14`,-123456789123456789n);
 });
 
 Deno.test(async function byteString() {
@@ -166,14 +160,23 @@ Deno.test(async function primitiveIdentity() {
     await assertRewrite(undefined);
 });
 
-Deno.test(async function simpleTypeIdentity() {
-    for (let i=0; i < 255; i++) {
-        const isPrimitive = i >= 20 && i <= 23;
-        const isReserved = i >= 24 && i <= 31;
-        if (isPrimitive || isReserved) {
+Deno.test(async function simpleValueTypeIdentity() {
+    for (let index=0; index <= 255; index++) {
+        const isReserved = index >= 24 && index <= 31;
+        if (isReserved) {
             continue;
         }
-        await assertRewrite(i);
+        const simpleValue = index;
+        const { getBytes, stream: writerStream } = byteWritableStream();
+        const writer = writerStream.getWriter();
+        await writeSimpleValue(writer,simpleValue);
+        const writeResult = await getBytes();
+        const decoder = decoderFromStream(bytesToStream(writeResult));
+        const next = await assertNext(decoder.events())
+        assertEquals(next.eventType, "literal", "Expect start event");
+        assertEquals(next.majorType, MajorType.SimpleValue, "Expect SimpleValue major type");
+        assertEquals((next as SimpleValueLiteralEvent).simpleValueType, "simple", "Expect simple value type");
+        assertEquals((next as SimpleValueLiteralEvent).data, simpleValue, "Expect correct value");
     }
 });
 

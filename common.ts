@@ -9,12 +9,14 @@ export const MajorType = Object.freeze({
 	SimpleValue: 7,
 });
 
-export const numbericalTypes = [
+export type MajorType = typeof MajorType[keyof typeof MajorType];
+
+export const integerTypes = Object.freeze([
 	MajorType.UnsignedInteger,
 	MajorType.NegativeInteger,
 	MajorType.Tag,
-];
+]);
 
-export function isNumerical(type: number) {
-	return (numbericalTypes as number[]).includes(type);
+export function isIntegerMajorType(type: number): type is typeof integerTypes[number] {
+	return (integerTypes as number[]).includes(type);
 }

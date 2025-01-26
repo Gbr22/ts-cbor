@@ -1,6 +1,7 @@
 import { MajorType } from "../common.ts";
 import { IterationControl } from "../iteration-control.ts";
 import { Mode, ReaderState, SubMode } from "./common.ts";
+import { EndEvent, StartEvent } from "./events.ts";
 import { flushHeaderAndArgument } from "./header.ts";
 
 export async function handleExpectingDataItemMode(state: ReaderState) {
@@ -15,7 +16,7 @@ export async function handleExpectingDataItemMode(state: ReaderState) {
     state.additionalInfo = byte & 0b00011111;
     state.numberValue = 0;
     state.numberOfBytesToRead = 0;
-    state.argumentBytes = [];
+    state.argumentBytes = new Uint8Array();
     state.isIndefinite = false;
 
     if (state.additionalInfo < 24) {
@@ -35,6 +36,7 @@ export async function handleExpectingDataItemMode(state: ReaderState) {
         state.numberValue = 0n;
         state.numberOfBytesToRead = 8;
     }
+    state.argumentBytes = new Uint8Array(state.numberOfBytesToRead);
     if ([28,29,30].includes(state.additionalInfo)) {
         throw new Error(`additionalInfo cannot be ${state.additionalInfo}`);
     }
@@ -44,7 +46,7 @@ export async function handleExpectingDataItemMode(state: ReaderState) {
         if (state.majorType == MajorType.ByteString) {
             state.mode = Mode.ExpectingDataItem;
             state.subMode = SubMode.ReadingIndefiniteByteString;
-            IterationControl.yield({
+            IterationControl.yield<StartEvent>({
                 eventType: "start",
                 length: undefined,
                 majorType: MajorType.ByteString,
@@ -53,7 +55,7 @@ export async function handleExpectingDataItemMode(state: ReaderState) {
         if (state.majorType == MajorType.TextString) {
             state.mode = Mode.ExpectingDataItem;
             state.subMode = SubMode.ReadingIndefiniteTextString;
-            IterationControl.yield({
+            IterationControl.yield<StartEvent>({
                 eventType: "start",
                 length: undefined,
                 majorType: MajorType.TextString,
@@ -62,13 +64,13 @@ export async function handleExpectingDataItemMode(state: ReaderState) {
         if (state.majorType == MajorType.SimpleValue) {
             state.mode = Mode.ExpectingDataItem;
             if (state.subMode == SubMode.ReadingIndefiniteByteString) {
-                IterationControl.yield({
+                IterationControl.yield<EndEvent>({
                     eventType: "end",
                     majorType: MajorType.ByteString
                 });
             }
             if (state.subMode == SubMode.ReadingIndefiniteTextString) {
-                IterationControl.yield({
+                IterationControl.yield<EndEvent>({
                     eventType: "end",
                     majorType: MajorType.TextString
                 });
