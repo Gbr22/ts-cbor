@@ -1,4 +1,4 @@
-import { MajorType } from "./common.ts";
+import { MajorType } from "../common.ts";
 
 export type LiteralEvent = IntegerLiteralEvent | SimpleValueLiteralEvent | FloatLiteralEvent;
 export type SimpleValueLiteralEvent = {

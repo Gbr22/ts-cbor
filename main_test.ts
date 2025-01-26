@@ -1,8 +1,7 @@
 import { assertEquals } from "@std/assert";
 import { consumeByteString, Decoder, DecoderEvent, decoderFromStream, LiteralEvent } from "./main.ts";
-import { MajorType } from "./main.ts";
+import { MajorType, parseDecoder } from "./main.ts";
 import { writeByteStream, writePrimitive } from "./encoder.ts";
-import { parseDecoder } from "./decoder.ts";
 import { bytesToStream, byteStringToStream, byteWritableStream, collectBytes, iterableToStream, joinBytes, stringToBytes } from "./utils.ts";
 
 function stripWhitespace(s: string) {

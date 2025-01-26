@@ -1,8 +1,15 @@
 export {
-	type Decoder,
-	decoderFromStream,
-	consumeByteString,
-} from "./decoder.ts";
+	parseDecoder
+} from "./decoder/parse.ts";
+export {
+	consumeByteString
+} from "./decoder/byte-string.ts";
+export {
+	decoderFromStream
+} from "./decoder/iterating.ts";
+export {
+	type Decoder
+} from "./decoder/common.ts";
 export {
 	type DecoderEvent,
 	type LiteralEvent,
@@ -11,7 +18,7 @@ export {
 	type StartEvent,
 	type EndEvent,
 	type DataEvent,
-} from "./events.ts";
+} from "./decoder/events.ts";
 export {
 	MajorType,
 } from "./common.ts";
