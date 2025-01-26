@@ -2,9 +2,23 @@ import { MajorType } from "../common.ts";
 import { IterationControl } from "../iteration-control.ts";
 import { Decoder, Mode, ReaderState } from "./common.ts";
 
+const utf8LengthMapping = [
+//   Expected     Mask         Length
+    [0b1100_0000, 0b1110_0000, 2     ],
+    [0b1110_0000, 0b1111_0000, 3     ],
+    [0b1111_0000, 0b1111_1000, 4     ],
+    [0b1111_1000, 0b1111_1100, 5     ],
+    [0b1111_1100, 0b1111_1110, 6     ],
+    [0b1111_1110, 0b1111_1111, 7     ],
+    [0b1111_1111, 0b1111_1111, 8     ],
+];
+
 export async function handleTextStringData(state: ReaderState) {
     if (state.byteArrayNumberOfBytesToRead <= 0) {
         state.mode = Mode.ExpectingDataItem;
+        if (state.unsafeTextSlice.length > 0) {
+            throw new Error(`Expected continuation of text string due to presence of incomplete UTF-8 sequence: ${JSON.stringify([...state.unsafeTextSlice])}`);
+        }
         IterationControl.yield({
             eventType: "end",
             majorType: MajorType.TextString,
@@ -13,31 +27,48 @@ export async function handleTextStringData(state: ReaderState) {
     if (state.isReaderDone) {
         throw new Error(`Unexpected end of stream when ${state.byteArrayNumberOfBytesToRead} bytes are left to read`);
     }
-    const to = state.index + state.byteArrayNumberOfBytesToRead;
-    const currentBufferSlice = state.currentBuffer.slice(state.index, to);
-    const slice = new Uint8Array(state.unsafeTextSlice.length+currentBufferSlice.length);
-    slice.set(state.unsafeTextSlice);
-    slice.set(currentBufferSlice, state.unsafeTextSlice.length);
+    const toIndex = state.index + state.byteArrayNumberOfBytesToRead;
+    const currentBufferSlice = state.currentBuffer.slice(state.index, toIndex);
     state.index += state.byteArrayNumberOfBytesToRead;
-    state.byteArrayNumberOfBytesToRead -= slice.length;
+    state.byteArrayNumberOfBytesToRead -= currentBufferSlice.length;
+    let slice = currentBufferSlice;
+    if (state.unsafeTextSlice.length > 0) {
+        slice = new Uint8Array(state.unsafeTextSlice.length+currentBufferSlice.length);
+        slice.set(state.unsafeTextSlice);
+        slice.set(currentBufferSlice, state.unsafeTextSlice.length);
+        state.unsafeTextSlice = new Uint8Array();
+    }
     if (slice.length > 0) {
         const last = slice[slice.length-1];
         let safeSlice = slice;
-        if ((last & 0b1000_0000) == 0b1000_0000) {
-            let safeIndex = slice.length - 1;
+        if ((last & 0b1000_0000) == 0b1000_0000 && !state.isReaderDone) {
+            let startByteIndex = slice.length - 1;
+            let length = 0;
             while (true) {
-                if (safeIndex < 0) {
-                    throw new Error("Invalid UTF-8 sequence in text string");
+                if (startByteIndex < 0) {
+                    throw new Error("Invalid UTF-8 sequence in text string, buffer underflow occurred while looking for start byte");
                 }
-                const isSafe = (slice[safeIndex] & 0b1100_0000) === 0b1100_0000;
-                if (isSafe) {
+                length++;
+                const currentByte = slice[startByteIndex];
+                const isStartByte = (currentByte & 0b1100_0000) === 0b1100_0000;
+                if (isStartByte) {
                     break;
                 }
-                safeIndex--;
+                startByteIndex--;
             }
-            safeSlice = slice.slice(0, safeIndex);
-            const unsafeSlice = slice.slice(safeIndex);
-            state.unsafeTextSlice = unsafeSlice;
+            const startByte = slice[startByteIndex];
+            let expectedLength = 0;
+            for (const [expected, mask, length] of utf8LengthMapping) {
+                if ((startByte & mask) === expected) {
+                    expectedLength = length;
+                    break;
+                }
+            }
+            if (expectedLength != length) {
+                safeSlice = slice.slice(0, startByteIndex);
+                const unsafeSlice = slice.slice(startByteIndex);
+                state.unsafeTextSlice = unsafeSlice;
+            }
         }
 
         IterationControl.yield({

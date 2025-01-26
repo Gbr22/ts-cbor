@@ -1,7 +1,6 @@
 import { assertEquals } from "@std/assert";
-import { consumeByteString, Decoder, DecoderEvent, decoderFromStream, LiteralEvent } from "./main.ts";
+import { consumeByteString, Decoder, DecoderEvent, decoderFromStream, LiteralEvent, writeByteStream, writePrimitive, writeTextStream } from "./main.ts";
 import { MajorType, parseDecoder } from "./main.ts";
-import { writeByteStream, writePrimitive } from "./encoder.ts";
 import { bytesToStream, byteStringToStream, byteWritableStream, collect, collectBytes, iterableToStream, joinBytes, stringToBytes } from "./utils.ts";
 import { consumeTextString } from "./decoder/text-string.ts";
 
@@ -199,7 +198,7 @@ Deno.test(async function byteStreamWriteTest() {
             070809 # "\u0007\b\t"
         FF         # primitive(*)
     `);
-    assertEquals(result,expected, "Expect correct byte stream");
+    assertEquals(result,expected, "Expect correct bytes");
 });
 
 Deno.test(async function byteStreamWriteReadTest() {
@@ -218,7 +217,7 @@ Deno.test(async function byteStreamWriteReadTest() {
     assertEquals(next.eventType, "start", "Expect start event");
     const readResult = await collectBytes(consumeByteString(decoder));
 
-    assertEquals(readResult,joinBytes(...chunks), "Expect correct byte stream");
+    assertEquals(readResult,joinBytes(...chunks), "Expect correct bytes");
 });
 
 Deno.test(async function textStringIdentity() {
@@ -240,4 +239,47 @@ Deno.test(async function brokenTextTest() {
     const parts = await collect(consumeTextString(decoder));
     const resultText = parts.join("");
     assertEquals(resultText,expectedText,"Expect correct text");
+});
+
+Deno.test(async function textStreamWriteTest() {
+    const chunks = [
+        "Lorem á",
+        "é ipsum",
+        "dolor ű",
+    ];
+    const stream: ReadableStream<string> = iterableToStream(chunks);
+    const { getBytes, stream: writerStream } = byteWritableStream();
+    const writer = writerStream.getWriter();
+    await writeTextStream(writer,stream);
+    const result = await getBytes();
+    const expected = stringToBytes(hex`
+    7F                       # text(*)
+        68                   # text(8)
+            4C6F72656D20C3A1 # "Lorem á"
+        68                   # text(8)
+            C3A920697073756D # "é ipsum"
+        68                   # text(8)
+            646F6C6F7220C5B1 # "dolor ű"
+        FF                   # primitive(*)
+    `);
+    assertEquals(result,expected, "Expect correct bytes");
+});
+
+Deno.test(async function byteStreamWriteReadTest() {
+    const chunks = [
+        "Lorem á",
+        "é ipsum",
+        "dolor ű",
+    ];
+    const stream: ReadableStream<string> = iterableToStream(chunks);
+    const { getBytes, stream: writerStream } = byteWritableStream();
+    const writer = writerStream.getWriter();
+    await writeTextStream(writer,stream);
+    const writeResult = await getBytes();
+    const decoder = decoderFromStream(bytesToStream(writeResult));
+    const next = await assertNext(decoder.events())
+    assertEquals(next.eventType, "start", "Expect start event");
+    const readResult = (await collect(consumeTextString(decoder))).join("");
+
+    assertEquals(readResult, chunks.join(""), "Expect correct bytes");
 });

@@ -1,9 +1,26 @@
 export {
+	writeByteStream,
+	writeByteString,
+	writeTextStream,
+	writeTextString,
+	writePrimitive,
+	writeFalse,
+	writeTrue,
+	writeNull,
+	writeUndefined,
+	writeNumber,
+	writeArgument,
+	writeHeader,
+} from "./encoder.ts";
+export {
 	parseDecoder
 } from "./decoder/parse.ts";
 export {
-	consumeByteString
+	consumeByteString,
 } from "./decoder/byte-string.ts";
+export {
+	consumeTextString,
+} from "./decoder/text-string.ts";
 export {
 	decoderFromStream
 } from "./decoder/iterating.ts";

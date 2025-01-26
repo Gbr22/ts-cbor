@@ -69,19 +69,37 @@ export async function writeByteStream(writer: Writer, stream: ReadableStream<Uin
     await writeHeader(writer, MajorType.SimpleValue, 31);
 }
 
+export async function writeTextString(writer: Writer, value: string) {
+    const buffer = new TextEncoder().encode(value);
+    await writeArgument(writer, MajorType.TextString, buffer.byteLength);
+    await writer.write(buffer);
+}
+
+export async function writeTextStream(writer: Writer, stream: ReadableStream<string>) {
+    await writeHeader(writer, MajorType.TextString, 31);
+    for await (const value of stream) {
+        await writeTextString(writer, value);
+    }
+    await writeHeader(writer, MajorType.SimpleValue, 31);
+}
+
+export async function writeNumber(writer: Writer, value: number | bigint) {
+    let newValue = value;
+    if (newValue < 0) {
+        if (typeof newValue === "bigint") {
+            newValue = (newValue * -1n) - 1n;
+        }
+        else if (typeof newValue === "number") {
+            newValue = (newValue * -1) - 1;
+        }
+    }
+    const type = value < 0 ? MajorType.NegativeInteger : MajorType.UnsignedInteger;
+    await writeArgument(writer, type, newValue);
+}
+
 export async function writePrimitive(writer: Writer, value: number | bigint | Uint8Array | ReadableStream<Uint8Array> | boolean | null | undefined | string) {
     if (typeof value === "number" || typeof value === "bigint") {
-        let newValue = value;
-        if (newValue < 0) {
-            if (typeof newValue === "bigint") {
-                newValue = (newValue * -1n) - 1n;
-            }
-            else if (typeof newValue === "number") {
-                newValue = (newValue * -1) - 1;
-            }
-        }
-        const type = value < 0 ? MajorType.NegativeInteger : MajorType.UnsignedInteger;
-        await writeArgument(writer, type, newValue);
+        await writeNumber(writer, value);
         return;
     }
     if (value instanceof Uint8Array) {
@@ -89,9 +107,7 @@ export async function writePrimitive(writer: Writer, value: number | bigint | Ui
         return;
     }
     if (typeof value === "string") {
-        const buffer = new TextEncoder().encode(value);
-        await writeArgument(writer, MajorType.TextString, buffer.byteLength);
-        await writer.write(buffer);
+        await writeTextString(writer, value);
         return;
     }
     if (value === false) {

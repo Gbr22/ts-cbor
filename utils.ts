@@ -23,7 +23,7 @@ export async function collectBytes(stream: AsyncIterable<Uint8Array>) {
 }
 
 export function iterableToStream<T>(it: Iterable<T>) {
-    return new ReadableStream({
+    return new ReadableStream<T>({
         start(controller) {
             for (const item of it) {
                 controller.enqueue(item);

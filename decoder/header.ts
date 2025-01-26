@@ -66,6 +66,7 @@ export function flushHeaderAndArgument(state: ReaderState) {
 	}
 	if (state.majorType == MajorType.TextString) {
 		state.mode = Mode.ReadingData;
+		state.unsafeTextSlice = new Uint8Array();
 		state.byteArrayNumberOfBytesToRead = Number(state.numberValue);
 		if (state.numberValue > Number.MAX_SAFE_INTEGER) {
 			throw new Error("String too large");
