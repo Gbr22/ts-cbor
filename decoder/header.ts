@@ -1,8 +1,9 @@
-import { isIntegerMajorType, MajorType } from "../common.ts";
+import { AdditionalInfo, isIntegerMajorType, MajorType } from "../common.ts";
 import { IterationControl } from "../iteration-control.ts";
 import { SimpleValueLiteralEvent } from "../main.ts";
 import { Mode, ReaderState } from "./common.ts";
 import { FloatLiteralEvent, IntegerLiteralEvent, StartEvent, TagLiteralEvent } from "./events.ts";
+import { yieldEndOfDataItem } from "./iterating.ts";
 import { decodeUint } from "./numbers.ts";
 
 export function flushHeaderAndArgument(state: ReaderState) {
@@ -12,7 +13,7 @@ export function flushHeaderAndArgument(state: ReaderState) {
 			if (state.argumentBytes.length > 0) {
 				state.numberValue = decodeUint(state.argumentBytes);
 			}
-			IterationControl.yield<TagLiteralEvent>({
+			yieldEndOfDataItem<TagLiteralEvent>(state,{
 				eventType: "literal",
 				majorType: MajorType.Tag,
 				data: state.argumentBytes,
@@ -22,15 +23,16 @@ export function flushHeaderAndArgument(state: ReaderState) {
 		if (array.length <= 0) {
 			array = new Uint8Array([state.additionalInfo]);
 		}
-		IterationControl.yield<IntegerLiteralEvent>({
+		yieldEndOfDataItem<IntegerLiteralEvent>(state,{
 			eventType: "literal",
 			majorType: state.majorType as IntegerLiteralEvent["majorType"],
 			data: array,
 		});
 	}
 	if (state.majorType == MajorType.SimpleValue) {
-		if (state.additionalInfo >= 25 && state.additionalInfo <= 27) {
-			IterationControl.yield<FloatLiteralEvent>({
+		state.mode = Mode.ExpectingDataItem;
+		if (state.additionalInfo >= AdditionalInfo.Length2 && state.additionalInfo <= AdditionalInfo.Length8) {
+			yieldEndOfDataItem<FloatLiteralEvent>(state,{
 				eventType: "literal",
 				simpleValueType: "float",
 				majorType: MajorType.SimpleValue,
@@ -45,7 +47,7 @@ export function flushHeaderAndArgument(state: ReaderState) {
 			numberValue = state.argumentBytes[0];
 		}
 		
-		IterationControl.yield<SimpleValueLiteralEvent>({
+		yieldEndOfDataItem<SimpleValueLiteralEvent>(state,{
 			eventType: "literal",
 			majorType: MajorType.SimpleValue,
 			simpleValueType: "simple",
@@ -81,6 +83,33 @@ export function flushHeaderAndArgument(state: ReaderState) {
 			eventType: "start",
 			length: state.byteArrayNumberOfBytesToRead,
 			majorType: MajorType.TextString,
+		});
+	}
+	if (state.majorType == MajorType.Array) {
+		if (state.argumentBytes.length > 0) {
+			state.numberValue = decodeUint(state.argumentBytes);
+		}
+		state.mode = Mode.ExpectingDataItem;
+		state.itemsToRead.push(state.numberValue);
+		state.hierarchy.push(MajorType.Array);
+		IterationControl.yield<StartEvent>({
+			eventType: "start",
+			length: state.numberValue,
+			majorType: MajorType.Array,
+		});
+	}
+	if (state.majorType == MajorType.Map) {
+		if (state.argumentBytes.length > 0) {
+			state.numberValue = decodeUint(state.argumentBytes);
+		}
+		state.mode = Mode.ExpectingDataItem;
+		const doubleLength = typeof state.numberValue === "bigint" ? state.numberValue * 2n : state.numberValue * 2;
+		state.itemsToRead.push(doubleLength);
+		state.hierarchy.push(MajorType.Map);
+		IterationControl.yield<StartEvent>({
+			eventType: "start",
+			length: state.numberValue,
+			majorType: MajorType.Map,
 		});
 	}
 	throw new Error("Invalid major type");

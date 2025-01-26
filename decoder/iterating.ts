@@ -1,5 +1,6 @@
 import { IterationControl } from "../iteration-control.ts";
 import { refreshBuffer } from "./buffer.ts";
+import { checkCollectionEnd } from "./collection.ts";
 import { createReaderState, Mode, ReaderState } from "./common.ts";
 import { DecoderEvent } from "./events.ts";
 import { handleExpectingDataItemMode } from "./expectingDataItemMode.ts";
@@ -19,12 +20,16 @@ async function handleDecoderIterationData(state: ReaderState) {
 		await handleReadingArgumentMode(state);
 		return;
 	}
-	throw new Error(`Invalid mode ${JSON.stringify(state.mode)}`);
+	throw new Error(`Invalid mode ${state.mode}`);
 }
 
 async function handleDecoderIteration(state: ReaderState) {
 	await refreshBuffer(state);
 	await handleDecoderIterationData(state);
+}
+
+export function yieldEndOfDataItem<Event extends DecoderEvent>(state: ReaderState, event: Event): never {
+	IterationControl.yield<DecoderEvent>(event,...checkCollectionEnd(state));
 }
 
 export function decoderFromStream(stream: ReadableStream<Uint8Array>) {

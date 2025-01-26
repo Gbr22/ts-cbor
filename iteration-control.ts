@@ -1,15 +1,15 @@
 type IterationControlType = "yield" | "return" | "continue";
 export class IterationControl<Yield, Exit> {
     type: IterationControlType;
-    value: Yield | Exit | undefined
+    value: Yield[] | Exit | undefined
 
-    private constructor(type: IterationControlType, value?: Yield | Exit | undefined) {
+    private constructor(type: IterationControlType, value?: Yield[] | Exit | undefined) {
         this.type = type;
         this.value = value;
     }
 
-    static yield<Yield, Exit = void>(value: Yield): never {
-        throw new IterationControl<Yield, Exit>("yield", value);
+    static yield<Yield, Exit = void>(...values: Yield[]): never {
+        throw new IterationControl<Yield, Exit>("yield", values);
     }
     static return<Yeild, Exit>(): never
     static return<Yeild, Exit>(value: Exit): never
@@ -28,7 +28,8 @@ export class IterationControl<Yield, Exit> {
                 } catch(result) {
                     if (result instanceof IterationControl) {
                         if (result.type === "yield") {
-                            yield result.value;
+                            console.log("yield",result.value);
+                            yield* result.value;
                         }
                         if (result.type === "return") {
                             return result.value;

@@ -25,7 +25,7 @@ export type IntegerLiteralEvent = {
 };
 export type StartEvent = {
     eventType: "start",
-    length: number | undefined,
+    length: number | bigint | undefined,
     majorType: typeof MajorType["ByteString"] | typeof MajorType["TextString"] | typeof MajorType["Array"] | typeof MajorType["Map"],
 };
 export type EndEvent = {

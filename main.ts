@@ -12,7 +12,7 @@ export {
 	writeByteString,
 	writeTextStream,
 	writeTextString,
-	writePrimitive,
+	writeValue,
 	writeFalse,
 	writeTrue,
 	writeNull,
@@ -21,6 +21,9 @@ export {
 	writeArgument,
 	writeHeader,
 	writeBreak,
+	writeArrayHeader,
+	type WritableValue,
+	type ReadableValue,
 } from "./encoder.ts";
 export {
 	parseDecoder

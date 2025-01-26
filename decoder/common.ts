@@ -33,6 +33,8 @@ export type ReaderState = {
 	isIndefinite: boolean
 	byteArrayNumberOfBytesToRead: number
     unsafeTextSlice: Uint8Array
+    itemsToRead: (number | bigint)[]
+    hierarchy: number[]
 };
 
 export function createReaderState(reader: ReadableStreamDefaultReader<Uint8Array>): ReaderState {
@@ -51,5 +53,7 @@ export function createReaderState(reader: ReadableStreamDefaultReader<Uint8Array
         isIndefinite: false,
         byteArrayNumberOfBytesToRead: 0,
         unsafeTextSlice: new Uint8Array(),
+        itemsToRead: [],
+        hierarchy: [],
     }
 }

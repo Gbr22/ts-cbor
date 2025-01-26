@@ -20,3 +20,11 @@ export const integerTypes = Object.freeze([
 export function isIntegerMajorType(type: number): type is typeof integerTypes[number] {
 	return (integerTypes as number[]).includes(type);
 }
+
+export const AdditionalInfo = Object.freeze({
+	Length1: 24,
+	Length2: 25,
+	Length4: 26,
+	Length8: 27,
+	IndefiniteLength: 31,
+});

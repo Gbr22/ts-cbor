@@ -1,5 +1,5 @@
 import { assertAlmostEquals, assertEquals } from "@std/assert";
-import { MajorType, parseDecoder, consumeByteString, decoderFromStream, SimpleValueLiteralEvent, writeByteStream, writePrimitive, writeTextStream } from "./main.ts";
+import { MajorType, parseDecoder, consumeByteString, decoderFromStream, SimpleValueLiteralEvent, writeByteStream, writeValue, writeTextStream, WritableValue } from "./main.ts";
 import { bytesToStream, byteStringToStream, byteWritableStream, collect, collectBytes, iterableToStream, joinBytes, stringToBytes } from "./utils.ts";
 import { consumeTextString } from "./decoder/text-string.ts";
 import { writeFloat16, writeFloat32, writeFloat64, writeSimpleValue } from "./encoder.ts";
@@ -69,12 +69,13 @@ async function assertNext<T>(iterator: AsyncIterableIterator<T>): Promise<T> {
     return value;
 }
 
-async function assertRewrite(value: number | bigint | Uint8Array | boolean | null | undefined | string) {
+async function assertRewrite(value: WritableValue) {
     const { getBytes, stream } = byteWritableStream();
     const writer = stream.getWriter();
-    await writePrimitive(writer,value);
+    await writeValue(writer,value);
     await writer.close();
     const bytes = getBytes();
+    console.log("bytes",bytes);
     const decoder = decoderFromStream(bytesToStream(bytes));
     const newValue = await parseDecoder(decoder);
     assertEquals(newValue, value, "Expect value to be rewritten correctly");
@@ -323,4 +324,31 @@ Deno.test(async function float64Test() {
 
 Deno.test(async function floatTest() {
     await assertRewrite(0.123456789);
+});
+
+Deno.test(async function arrayTest() {
+    await assertRewrite(["alma","körte","szilva"]);
+});
+
+Deno.test(async function nestedArrayTest() {
+    await assertRewrite([
+        "alma","körte","szilva",
+        [1,2,[3,4,5]],
+    ]);
+});
+
+Deno.test(async function mapTest() {
+    await assertRewrite(new Map<WritableValue,WritableValue>([
+        ["alma","körte"],
+        [2,"szilva"],
+        [3,4],
+    ]));
+});
+
+Deno.test(async function nestedCollectionsTest() {
+    await assertRewrite(new Map<WritableValue,WritableValue>([
+        ["alma",["körte",5,[7,8,9]]],
+        [[2,9],"szilva"],
+        [3,4],
+    ]));
 });

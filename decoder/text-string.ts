@@ -2,6 +2,7 @@ import { MajorType } from "../common.ts";
 import { IterationControl } from "../iteration-control.ts";
 import { Decoder, Mode, ReaderState } from "./common.ts";
 import { DataEvent, EndEvent } from "./events.ts";
+import { yieldEndOfDataItem } from "./iterating.ts";
 
 const utf8LengthMapping = [
 //   Expected     Mask         Length
@@ -20,7 +21,7 @@ export async function handleTextStringData(state: ReaderState) {
         if (state.unsafeTextSlice.length > 0) {
             throw new Error(`Expected continuation of text string due to presence of incomplete UTF-8 sequence: ${JSON.stringify([...state.unsafeTextSlice])}`);
         }
-        IterationControl.yield<EndEvent>({
+        yieldEndOfDataItem<EndEvent>(state,{
             eventType: "end",
             majorType: MajorType.TextString,
         });
@@ -85,7 +86,7 @@ export async function* consumeTextString(decoder: Decoder): AsyncIterableIterato
 
     for await (const value of decoder.events()) {
         if (value.majorType != MajorType.TextString) {
-            throw new Error(`Unexpected major type ${value.majorType} while reading text string`);
+            throw new Error(`Unexpected major type ${value.majorType} while reading text string event: ${value}`);
         }
         if (value.eventType === "start") {
             counter++;

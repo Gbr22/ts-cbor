@@ -1,4 +1,5 @@
-import { MajorType } from "./common.ts";
+import { AdditionalInfo, MajorType } from "./common.ts";
+import { UnknownSimpleValue } from "./decoder/simple-value.ts";
 
 type Writer = WritableStreamDefaultWriter<Uint8Array>;
 
@@ -24,41 +25,41 @@ export async function writeSimpleValue(writer: Writer, value: number) {
         await writeHeader(writer, MajorType.SimpleValue, value);
         return;
     }
-    await writeHeader(writer, MajorType.SimpleValue, 24);
+    await writeHeader(writer, MajorType.SimpleValue, AdditionalInfo.Length1);
     await writer.write(new Uint8Array([value]));
 }
 export async function writeBreak(writer: Writer) {
-    await writeHeader(writer, MajorType.SimpleValue, 31);
+    await writeHeader(writer, MajorType.SimpleValue, AdditionalInfo.IndefiniteLength);
 }
 export async function writeArgument(writer: Writer, majorType: number, number: number | bigint) {
     if (number < 0) {
         throw new Error("Number must be positive");
     }
-    if (number < 24) {
+    if (number < AdditionalInfo.Length1) {
         await writeHeader(writer, majorType, Number(number));
         return;
     }
     if (number <= 0xFF) {
-        await writeHeader(writer, majorType, 24);
+        await writeHeader(writer, majorType, AdditionalInfo.Length1);
         await writer.write(new Uint8Array([Number(number)]));
         return;
     }
     if (number <= 0xFFFF) {
-        await writeHeader(writer, majorType, 25);
+        await writeHeader(writer, majorType, AdditionalInfo.Length2);
         const buffer = new Uint8Array(2);
         new DataView(buffer.buffer).setUint16(0, Number(number));
         await writer.write(buffer);
         return;
     }
     if (number <= 0xFFFF_FFFF) {
-        await writeHeader(writer, majorType, 26);
+        await writeHeader(writer, majorType, AdditionalInfo.Length4);
         const buffer = new Uint8Array(4);
         new DataView(buffer.buffer).setUint32(0, Number(number));
         await writer.write(buffer);
         return;
     }
     if (number <= 0xFFFF_FFFF_FFFF_FFFFn) {
-        await writeHeader(writer, majorType, 27);
+        await writeHeader(writer, majorType, AdditionalInfo.Length8);
         const buffer = new Uint8Array(8);
         new DataView(buffer.buffer).setBigUint64(0, BigInt(number));
         await writer.write(buffer);
@@ -73,7 +74,7 @@ export async function writeByteString(writer: Writer, value: Uint8Array) {
 }
 
 export async function writeByteStream(writer: Writer, stream: ReadableStream<Uint8Array>) {
-    await writeHeader(writer, MajorType.ByteString, 31);
+    await writeHeader(writer, MajorType.ByteString, AdditionalInfo.IndefiniteLength);
     for await (const value of stream) {
         await writeByteString(writer, value);
     }
@@ -87,7 +88,7 @@ export async function writeTextString(writer: Writer, value: string) {
 }
 
 export async function writeTextStream(writer: Writer, stream: ReadableStream<string>) {
-    await writeHeader(writer, MajorType.TextString, 31);
+    await writeHeader(writer, MajorType.TextString, AdditionalInfo.IndefiniteLength);
     for await (const value of stream) {
         await writeTextString(writer, value);
     }
@@ -123,18 +124,39 @@ async function writeFloatN<ArrayConstructor extends typeof Float16Array | typeof
 }
 
 export async function writeFloat16(writer: Writer, value: number | Float16Array) {
-    await writeFloatN(writer, value, Float16Array, 25);
+    await writeFloatN(writer, value, Float16Array, AdditionalInfo.Length2);
 }
 
 export async function writeFloat32(writer: Writer, value: number | Float32Array) {
-    await writeFloatN(writer, value, Float32Array, 26);
+    await writeFloatN(writer, value, Float32Array, AdditionalInfo.Length4);
 }
 
 export async function writeFloat64(writer: Writer, value: number | Float64Array) {
-    await writeFloatN(writer, value, Float64Array, 27);
+    await writeFloatN(writer, value, Float64Array, AdditionalInfo.Length8);
 }
 
-export async function writePrimitive(writer: Writer, value: number | bigint | Uint8Array | ReadableStream<Uint8Array> | boolean | null | undefined | string) {
+export async function writeArrayHeader(writer: Writer, length?: number | bigint | undefined) {
+    if (length === undefined) {
+        await writeHeader(writer, MajorType.Array, AdditionalInfo.IndefiniteLength);
+        return;
+    }
+    await writeArgument(writer, MajorType.Array, length);
+}
+
+export async function writeMapHeader(writer: Writer, length?: number | bigint | undefined) {
+    if (length === undefined) {
+        await writeHeader(writer, MajorType.Map, AdditionalInfo.IndefiniteLength);
+        return;
+    }
+    await writeArgument(writer, MajorType.Map, length);
+}
+
+type PrimitiveWritableValue = number | bigint | Uint8Array | boolean | null | undefined | string;
+type PrimitiveReadableValue = PrimitiveWritableValue | UnknownSimpleValue;
+export type WritableValue = PrimitiveWritableValue | Map<WritableValue,WritableValue> | Iterable<WritableValue> | AsyncIterable<WritableValue> | Array<WritableValue>;
+export type ReadableValue = PrimitiveReadableValue | Map<ReadableValue,ReadableValue> | Iterable<ReadableValue> | AsyncIterable<ReadableValue> | Array<ReadableValue>;
+
+export async function writeValue(writer: Writer, value: PrimitiveWritableValue | WritableValue) {
     if (typeof value === "number" && Number.isInteger(value)) {
         await writeNumber(writer, value);
         return;
@@ -169,6 +191,37 @@ export async function writePrimitive(writer: Writer, value: number | bigint | Ui
     }
     if (value === undefined) {
         await writeUndefined(writer);
+        return;
+    }
+    if (value instanceof Map) {
+        await writeMapHeader(writer, value.size);
+        for (const [key, item] of value) {
+            await writeValue(writer, key);
+            await writeValue(writer, item);
+        }
+        return;
+    }
+    if (value instanceof Array) {
+        await writeArrayHeader(writer, value.length);
+        for (const e of value) {
+            await writeValue(writer, e);
+        }
+        return;
+    }
+    if (typeof (value as AsyncIterable<WritableValue>)?.[Symbol.asyncIterator] === "function") {
+        await writeArrayHeader(writer);
+        for await (const e of value) {
+            await writeValue(writer, e);
+        }
+        await writeBreak(writer);
+        return;
+    }
+    if (typeof (value as Iterable<WritableValue>)?.[Symbol.iterator] === "function") {
+        await writeArrayHeader(writer);
+        for (const e of value as Iterable<WritableValue>) {
+            await writeValue(writer, e);
+        }
+        await writeBreak(writer);
         return;
     }
 }
