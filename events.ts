@@ -1,6 +1,19 @@
 import { MajorType } from "./common.ts";
 
-export type LiteralEvent = {
+export type LiteralEvent = IntegerLiteralEvent | SimpleValueLiteralEvent | FloatLiteralEvent;
+export type SimpleValueLiteralEvent = {
+    eventType: "literal"
+    majorType: typeof MajorType["SimpleValue"]
+    numberValue: number
+    data: number
+};
+export type FloatLiteralEvent = {
+    eventType: "literal"
+    majorType: typeof MajorType["SimpleValue"]
+    bytes: number[]
+    data: number
+}
+export type IntegerLiteralEvent = {
     eventType: "literal",
     majorType: typeof MajorType["NegativeInteger"] | typeof MajorType["UnsignedInteger"] | typeof MajorType["Tag"];
     data: number | bigint;

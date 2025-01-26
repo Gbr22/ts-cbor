@@ -48,7 +48,7 @@ async function assertNext<T>(iterator: AsyncIterableIterator<T>): Promise<T> {
     return value;
 }
 
-async function assertRewrite(value: number | bigint | Uint8Array) {
+async function assertRewrite(value: number | bigint | Uint8Array | boolean | null | undefined) {
     const { getBytes, stream } = byteWritableStream();
     const writer = stream.getWriter();
     await writePrimitive(writer,value);
@@ -135,4 +135,22 @@ Deno.test(async function constructedByteStringIdentity() {
         buffer[i] = i & 255;
     }
     await assertRewrite(buffer);
+});
+
+Deno.test(async function primitiveIdentity() {
+    await assertRewrite(false);
+    await assertRewrite(true);
+    await assertRewrite(null);
+    await assertRewrite(undefined);
+});
+
+Deno.test(async function simpleTypeIdentity() {
+    for (let i=0; i < 255; i++) {
+        const isPrimitive = i >= 20 && i <= 23;
+        const isReserved = i >= 24 && i <= 31;
+        if (isPrimitive || isReserved) {
+            continue;
+        }
+        await assertRewrite(i);
+    }
 });

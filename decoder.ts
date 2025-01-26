@@ -64,6 +64,7 @@ type ReaderState = {
 	additionalInfo: number
 	numberOfBytesToRead: number
 	numberValue: number | bigint
+	argumentBytes: number[]
 	isIndefinite: boolean
 	byteArrayNumberOfBytesToRead: number
 };
@@ -79,6 +80,7 @@ function createReaderState(reader: ReadableStreamDefaultReader<Uint8Array>): Rea
 		additionalInfo: NaN,
 		numberOfBytesToRead: 0,
 		numberValue: 0,
+		argumentBytes: [],
 		isIndefinite: false,
 		byteArrayNumberOfBytesToRead: 0,
 	}
@@ -100,6 +102,40 @@ function flushHeaderAndArgument(state: ReaderState) {
 			data: state.numberValue,
 		});
 	}
+	if (state.majorType == MajorType.SimpleValue) {
+		if (state.additionalInfo >= 25 && state.additionalInfo <= 27) {
+			// TODO: Implement float
+			IterationControl.yield({
+				eventType: "literal",
+				majorType: MajorType.SimpleValue,
+				bytes: state.argumentBytes,
+				data: state.numberValue,
+			})
+		}
+		let numberValue = state.additionalInfo;
+		if (state.argumentBytes.length > 0) {
+			numberValue = state.argumentBytes[0];
+		}
+		let value: number | false | true | null | undefined = Number(numberValue);
+		if (numberValue == 20) {
+			value = false;
+		}
+		if (numberValue == 21) {
+			value = true;
+		}
+		if (numberValue == 22) {
+			value = null;
+		}
+		if (numberValue == 23) {
+			value = undefined;
+		}
+		IterationControl.yield({
+			eventType: "literal",
+			majorType: MajorType.SimpleValue,
+			numberValue: numberValue,
+			data: value,
+		});
+	}
 	if (state.majorType == MajorType.ByteString) {
 		state.mode = Mode.ReadingData;
 		state.byteArrayNumberOfBytesToRead = Number(state.numberValue);
@@ -115,14 +151,21 @@ function flushHeaderAndArgument(state: ReaderState) {
 }
 
 async function handleExpectingDataItemMode(state: ReaderState) {
+	if (state.isReaderDone) {
+		IterationControl.return();
+	}
 	const byte = state.currentBuffer[state.index];
 	state.index++;
+	
 	state.majorType = byte >>> 5;
 	state.mode = Mode.ReadingArgument;
 	state.additionalInfo = byte & 0b00011111;
 	state.numberValue = 0;
+	state.numberOfBytesToRead = 0;
+	state.argumentBytes = [];
+	state.isIndefinite = false;
+
 	if (state.additionalInfo < 24) {
-		state.numberOfBytesToRead = 0;
 		state.numberValue = state.additionalInfo;
 		flushHeaderAndArgument(state);
 	}
@@ -144,7 +187,6 @@ async function handleExpectingDataItemMode(state: ReaderState) {
 	}
 	if (state.additionalInfo == 31) {
 		state.isIndefinite = true;
-		state.numberOfBytesToRead = 0;
 	}
 	if (state.isIndefinite && isNumerical(state.majorType)) {
 		throw new Error(`Major Type ${state.majorType} cannot be isIndefinite`);
@@ -156,6 +198,9 @@ async function handleReadingArgumentMode(state: ReaderState) {
 	}
 	const byte = state.currentBuffer[state.index];
 	state.index++;
+
+	state.argumentBytes.push(byte);
+
 	if (typeof state.numberValue == "bigint") {
 		state.numberValue = (state.numberValue << 8n) | BigInt(byte);
 	} else {

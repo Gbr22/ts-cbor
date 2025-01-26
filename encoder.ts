@@ -2,6 +2,18 @@ import { MajorType } from "./common.ts";
 
 type Writer = WritableStreamDefaultWriter<Uint8Array>;
 
+export async function writeFalse(writer: Writer) {
+    await writer.write(new Uint8Array([0xF4]));
+}
+export async function writeTrue(writer: Writer) {
+    await writer.write(new Uint8Array([0xF5]));
+}
+export async function writeNull(writer: Writer) {
+    await writer.write(new Uint8Array([0xF6]));
+}
+export async function writeUndefined(writer: Writer) {
+    await writer.write(new Uint8Array([0xF7]));
+}
 export async function writeHeader(writer: Writer, majorType: number, additionalInfo: number) {
     const header = new Uint8Array(1);
     header[0] = (majorType << 5) | additionalInfo;
@@ -44,7 +56,7 @@ export async function writeArgument(writer: Writer, majorType: number, number: n
     throw new Error(`Number too large: ${number}`);
 }
 
-export async function writePrimitive(writer: Writer, value: number | bigint | Uint8Array) {
+export async function writePrimitive(writer: Writer, value: number | bigint | Uint8Array | boolean | null | undefined) {
     if (typeof value === "number" || typeof value === "bigint") {
         let newValue = value;
         if (newValue < 0) {
@@ -57,9 +69,27 @@ export async function writePrimitive(writer: Writer, value: number | bigint | Ui
         }
         const type = value < 0 ? MajorType.NegativeInteger : MajorType.UnsignedInteger;
         await writeArgument(writer, type, newValue);
+        return;
     }
     if (value instanceof Uint8Array) {
         await writeArgument(writer, MajorType.ByteString, value.byteLength);
         await writer.write(value);
+        return;
+    }
+    if (value === false) {
+        await writeFalse(writer);
+        return;
+    }
+    if (value === true) {
+        await writeTrue(writer);
+        return;
+    }
+    if (value === null) {
+        await writeNull(writer);
+        return;
+    }
+    if (value === undefined) {
+        await writeUndefined(writer);
+        return;
     }
 }

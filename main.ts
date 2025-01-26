@@ -6,6 +6,8 @@ export {
 export {
 	type DecoderEvent,
 	type LiteralEvent,
+	type IntegerLiteralEvent,
+	type SimpleValueLiteralEvent,
 	type StartEvent,
 	type EndEvent,
 	type DataEvent,
