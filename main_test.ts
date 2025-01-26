@@ -130,7 +130,9 @@ Deno.test(async function byteStringIdentity() {
 });
 
 Deno.test(async function constructedByteStringIdentity() {
-    const testText = "Hello, World!";
-    const data = new TextEncoder().encode(testText);
-    await assertRewrite(data);
+    const buffer = new Uint8Array(0xFF+1);
+    for (let i=0; i < buffer.length; i++) {
+        buffer[i] = i & 255;
+    }
+    await assertRewrite(buffer);
 });

@@ -56,6 +56,7 @@ export async function parseDecoder<T>(decoder: Decoder): Promise<T> {
 
 type ReaderState = {
 	reader: ReadableStreamDefaultReader<Uint8Array>
+	isReaderDone: boolean,
 	currentBuffer: Uint8Array
 	mode: number
 	index: number
@@ -70,6 +71,7 @@ type ReaderState = {
 function createReaderState(reader: ReadableStreamDefaultReader<Uint8Array>): ReaderState {
 	return {
 		reader,
+		isReaderDone: false,
 		currentBuffer: new Uint8Array(),
 		mode: Mode.ExpectingDataItem,
 		index: 0,
@@ -112,7 +114,7 @@ function flushHeaderAndArgument(state: ReaderState) {
 	throw new Error("Invalid major type");
 }
 
-async function handleReadDataItemFirstByte(state: ReaderState) {
+async function handleExpectingDataItemMode(state: ReaderState) {
 	const byte = state.currentBuffer[state.index];
 	state.index++;
 	state.majorType = byte >>> 5;
@@ -148,7 +150,10 @@ async function handleReadDataItemFirstByte(state: ReaderState) {
 		throw new Error(`Major Type ${state.majorType} cannot be isIndefinite`);
 	}
 }
-async function handleReadArgument(state: ReaderState) {
+async function handleReadingArgumentMode(state: ReaderState) {
+	if (state.isReaderDone) {
+		throw new Error(`Unexpected end of stream when ${state.numberOfBytesToRead} bytes are left to read`);
+	}
 	const byte = state.currentBuffer[state.index];
 	state.index++;
 	if (typeof state.numberValue == "bigint") {
@@ -171,41 +176,61 @@ async function handleByteStringData(state: ReaderState) {
 			majorType: MajorType.ByteString,
 		});
 	}
+	if (state.isReaderDone) {
+		throw new Error(`Unexpected end of stream when ${state.byteArrayNumberOfBytesToRead} bytes are left to read`);
+	}
 	const to = state.index + state.byteArrayNumberOfBytesToRead;
 	const slice = state.currentBuffer.slice(state.index, to);
 	state.index += state.byteArrayNumberOfBytesToRead;
-	IterationControl.yield({
-		eventType: "data",
-		majorType: MajorType.ByteString,
-		data: slice,
-	});
+	state.byteArrayNumberOfBytesToRead -= slice.length;
+	if (slice.length > 0) {
+		IterationControl.yield({
+			eventType: "data",
+			majorType: MajorType.ByteString,
+			data: slice,
+		});
+	}
 }
 
-async function handleDecoderIterationData(state: ReaderState) {
-	if (state.mode == Mode.ReadingData && state.majorType == MajorType.ByteString) {
+async function handleReadingDataMode(state: ReaderState) {
+	if (state.majorType == MajorType.ByteString) {
 		await handleByteStringData(state);
 		return;
 	}
-	else if (state.mode == Mode.ExpectingDataItem) {
-		await handleReadDataItemFirstByte(state);
+	throw new Error(`Invalid major type ${state.majorType} in reading data mode`);
+}
+
+async function handleDecoderIterationData(state: ReaderState) {
+	if (state.mode == Mode.ReadingData) {
+		await handleReadingDataMode(state);
 		return;
 	}
-	else if (state.mode == Mode.ReadingArgument && state.numberOfBytesToRead > 0) {
-		await handleReadArgument(state);
+	if (state.mode == Mode.ExpectingDataItem) {
+		await handleExpectingDataItemMode(state);
 		return;
 	}
-	throw new Error(`Invalid state ${JSON.stringify(state)}`);
+	if (state.mode == Mode.ReadingArgument) {
+		await handleReadingArgumentMode(state);
+		return;
+	}
+	throw new Error(`Invalid mode ${JSON.stringify(state.mode)}`);
+}
+
+async function refreshBuffer(state: ReaderState) {
+	while (state.index >= state.currentBuffer.length && !state.isReaderDone) {
+		state.index = 0;
+		const { done, value } = await state.reader.read();
+		if (done) {
+			state.isReaderDone = true;
+			state.currentBuffer = new Uint8Array();
+		} else {
+			state.currentBuffer = value;
+		}
+	}
 }
 
 async function handleDecoderIteration(state: ReaderState) {
-	if (state.index >= state.currentBuffer.length) {
-		const { done, value } = await state.reader.read();
-		if (done) {
-			IterationControl.return();
-		}
-		state.currentBuffer = value;
-		state.index = 0;
-	}
+	await refreshBuffer(state);
 	await handleDecoderIterationData(state);
 }
 
