@@ -1,7 +1,7 @@
 import { assertEquals } from "@std/assert";
 import { consumeByteString, decoderFromStream, LiteralEvent } from "./main.ts";
 import { MajorType } from "./main.ts";
-import { encoderFromStream } from "./encoder.ts";
+import { writePrimitive } from "./encoder.ts";
 import { parseDecoder } from "./decoder.ts";
 import { bytesToStream, byteStringToStream, byteWritableStream, collectBytes } from "./utils.ts";
 
@@ -50,9 +50,9 @@ async function assertNext<T>(iterator: AsyncIterableIterator<T>): Promise<T> {
 
 async function assertRewrite(value: number | bigint | Uint8Array) {
     const { getBytes, stream } = byteWritableStream();
-    const encoder = encoderFromStream(stream);
-    await encoder.writePrimitive(value);
-    await encoder.close();
+    const writer = stream.getWriter();
+    await writePrimitive(writer,value);
+    await writer.close();
     const bytes = getBytes();
     const decoder = decoderFromStream(bytesToStream(bytes));
     const newValue = await parseDecoder(decoder);

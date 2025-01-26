@@ -1,9 +1,5 @@
 import { MajorType } from "./common.ts";
 
-export type Encoder = {
-
-};
-
 type Writer = WritableStreamDefaultWriter<Uint8Array>;
 
 export async function writeHeader(writer: Writer, majorType: number, additionalInfo: number) {
@@ -66,15 +62,4 @@ export async function writePrimitive(writer: Writer, value: number | bigint | Ui
         await writeArgument(writer, MajorType.ByteString, value.byteLength);
         await writer.write(value);
     }
-}
-
-export function encoderFromStream(stream: WritableStream<Uint8Array>) {
-    const writer = stream.getWriter();
-    
-    return {
-        writePrimitive: writePrimitive.bind(null, writer),
-        async close() {
-            await writer.close();
-        }
-    };
 }
