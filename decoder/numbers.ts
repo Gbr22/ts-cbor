@@ -26,7 +26,6 @@ export function decodeFloat(array: Uint8Array): number {
         return new DataView(array.buffer).getFloat32(0);
     }
     if (array.length == 2) {
-        // TODO: implement fallback for f16
         return new DataView(array.buffer).getFloat16(0);
     }
     throw new Error(`Could not decode Float, invalid number of bytes: ${array.length}`);

@@ -108,22 +108,42 @@ export async function writeNumber(writer: Writer, value: number | bigint) {
     await writeArgument(writer, type, newValue);
 }
 
-export async function writeFloat16(writer: Writer, value: number | Float16Array) {
-    let floatArray;
-    if (value instanceof Float16Array) {
+async function writeFloatN<ArrayConstructor extends typeof Float16Array | typeof Float32Array | typeof Float64Array>(writer: Writer, value: number | InstanceType<ArrayConstructor>, ArrayConstructor: ArrayConstructor, simpleValue: number) {
+    let floatArray: InstanceType<ArrayConstructor> = undefined!;
+    if (value instanceof ArrayConstructor) {
         floatArray = value;
     } else {
-        floatArray = new Float16Array(1);
-        floatArray[0] = value;
+        floatArray = new ArrayConstructor(1) as InstanceType<ArrayConstructor>;
+        floatArray[0] = value as number;
     }
-    new DataView(floatArray.buffer).setFloat16;
     const buffer = new Uint8Array(floatArray.buffer);
-    await writeArgument(writer, MajorType.SimpleValue, 25);
-    await writer.write(buffer);
+    const reverse = new Uint8Array([...buffer].reverse());
+    await writeHeader(writer, MajorType.SimpleValue, simpleValue);
+    await writer.write(reverse);
+}
+
+export async function writeFloat16(writer: Writer, value: number | Float16Array) {
+    await writeFloatN(writer, value, Float16Array, 25);
+}
+
+export async function writeFloat32(writer: Writer, value: number | Float32Array) {
+    await writeFloatN(writer, value, Float32Array, 26);
+}
+
+export async function writeFloat64(writer: Writer, value: number | Float64Array) {
+    await writeFloatN(writer, value, Float64Array, 27);
 }
 
 export async function writePrimitive(writer: Writer, value: number | bigint | Uint8Array | ReadableStream<Uint8Array> | boolean | null | undefined | string) {
-    if (typeof value === "number" || typeof value === "bigint") {
+    if (typeof value === "number" && Number.isInteger(value)) {
+        await writeNumber(writer, value);
+        return;
+    }
+    if (typeof value === "number") {
+        await writeFloat64(writer, value);
+        return;
+    }
+    if (typeof value === "bigint") {
         await writeNumber(writer, value);
         return;
     }

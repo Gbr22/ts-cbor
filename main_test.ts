@@ -1,8 +1,10 @@
-import { assertEquals } from "@std/assert";
+import { assertAlmostEquals, assertEquals } from "@std/assert";
 import { MajorType, parseDecoder, consumeByteString, decoderFromStream, SimpleValueLiteralEvent, writeByteStream, writePrimitive, writeTextStream } from "./main.ts";
 import { bytesToStream, byteStringToStream, byteWritableStream, collect, collectBytes, iterableToStream, joinBytes, stringToBytes } from "./utils.ts";
 import { consumeTextString } from "./decoder/text-string.ts";
-import { writeSimpleValue } from "./encoder.ts";
+import { writeFloat16, writeFloat32, writeFloat64, writeSimpleValue } from "./encoder.ts";
+import { FloatLiteralEvent } from "./decoder/events.ts";
+import { decodeFloat, decodeNumberEvent } from "./decoder/numbers.ts";
 
 function stripWhitespace(s: string) {
     return s.replaceAll(/\s/g,"");
@@ -173,7 +175,7 @@ Deno.test(async function simpleValueTypeIdentity() {
         const writeResult = await getBytes();
         const decoder = decoderFromStream(bytesToStream(writeResult));
         const next = await assertNext(decoder.events())
-        assertEquals(next.eventType, "literal", "Expect start event");
+        assertEquals(next.eventType, "literal", "Expect literal event");
         assertEquals(next.majorType, MajorType.SimpleValue, "Expect SimpleValue major type");
         assertEquals((next as SimpleValueLiteralEvent).simpleValueType, "simple", "Expect simple value type");
         assertEquals((next as SimpleValueLiteralEvent).data, simpleValue, "Expect correct value");
@@ -285,4 +287,40 @@ Deno.test(async function byteStreamWriteReadTest() {
     const readResult = (await collect(consumeTextString(decoder))).join("");
 
     assertEquals(readResult, chunks.join(""), "Expect correct bytes");
+});
+
+async function floatTest(writeFloat: (writer: WritableStreamDefaultWriter<Uint8Array>, value: number)=>Promise<void>, value: number, tolerance: number) {
+    const { getBytes, stream: writerStream } = byteWritableStream();
+    const writer = writerStream.getWriter();
+    await writeFloat(writer,value);
+    const writeResult = await getBytes();
+    const decoder = decoderFromStream(bytesToStream(writeResult));
+    const next = await assertNext(decoder.events())
+    assertEquals(next.eventType, "literal", "Expect literal event");
+    assertEquals(next.majorType, MajorType.SimpleValue, "Expect SimpleValue major type");
+    assertEquals((next as FloatLiteralEvent).simpleValueType, "float", "Expect simple value type");
+    assertAlmostEquals(decodeFloat((next as FloatLiteralEvent).data), value, tolerance, "Expect correct value (data)");
+    assertAlmostEquals(decodeNumberEvent(next) as number, value, tolerance, "Expect correct value (event)");
+}
+
+Deno.test(async function float16Test() {
+    const tolerance = 0.001;
+    await floatTest(writeFloat16, Math.PI, tolerance);
+    await floatTest(writeFloat16, Math.E, tolerance);
+});
+
+Deno.test(async function float32Test() {
+    const tolerance = 0.00001;
+    await floatTest(writeFloat32, Math.PI, tolerance);
+    await floatTest(writeFloat32, Math.E, tolerance);
+});
+
+Deno.test(async function float64Test() {
+    const tolerance = 0.000000001;
+    await floatTest(writeFloat64, Math.PI, tolerance);
+    await floatTest(writeFloat64, Math.E, tolerance);
+});
+
+Deno.test(async function floatTest() {
+    await assertRewrite(0.123456789);
 });
