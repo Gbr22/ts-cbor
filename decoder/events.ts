@@ -21,16 +21,20 @@ export type IntegerLiteralEvent = {
 export type StartEvent = {
     eventType: "start",
     length: number | undefined,
-    majorType: typeof MajorType["ByteString"],
+    majorType: typeof MajorType["ByteString"] | typeof MajorType["TextString"],
 };
 export type EndEvent = {
     eventType: "end",
-    majorType: typeof MajorType["ByteString"],
+    majorType: typeof MajorType["ByteString"] | typeof MajorType["TextString"],
 };
 export type DataEvent = {
     eventType: "data",
     majorType: typeof MajorType["ByteString"];
     data: Uint8Array;
+} | {
+    eventType: "data",
+    majorType: typeof MajorType["TextString"];
+    data: string;
 };
 
 export type DecoderEvent = LiteralEvent | StartEvent | EndEvent | DataEvent;

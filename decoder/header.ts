@@ -64,5 +64,17 @@ export function flushHeaderAndArgument(state: ReaderState) {
 			majorType: MajorType.ByteString,
 		});
 	}
+	if (state.majorType == MajorType.TextString) {
+		state.mode = Mode.ReadingData;
+		state.byteArrayNumberOfBytesToRead = Number(state.numberValue);
+		if (state.numberValue > Number.MAX_SAFE_INTEGER) {
+			throw new Error("String too large");
+		}
+		IterationControl.yield({
+			eventType: "start",
+			length: state.byteArrayNumberOfBytesToRead,
+			majorType: MajorType.TextString,
+		});
+	}
 	throw new Error("Invalid major type");
 }

@@ -50,12 +50,27 @@ export async function handleExpectingDataItemMode(state: ReaderState) {
                 majorType: MajorType.ByteString,
             });
         }
+        if (state.majorType == MajorType.TextString) {
+            state.mode = Mode.ExpectingDataItem;
+            state.subMode = SubMode.ReadingIndefiniteTextString;
+            IterationControl.yield({
+                eventType: "start",
+                length: undefined,
+                majorType: MajorType.TextString,
+            });
+        }
         if (state.majorType == MajorType.SimpleValue) {
             state.mode = Mode.ExpectingDataItem;
             if (state.subMode == SubMode.ReadingIndefiniteByteString) {
                 IterationControl.yield({
                     eventType: "end",
                     majorType: MajorType.ByteString
+                });
+            }
+            if (state.subMode == SubMode.ReadingIndefiniteTextString) {
+                IterationControl.yield({
+                    eventType: "end",
+                    majorType: MajorType.TextString
                 });
             }
             throw new Error(`Unexpected stop code`);

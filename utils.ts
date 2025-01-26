@@ -1,5 +1,5 @@
-export async function collect(stream: AsyncIterable<Uint8Array>) {
-    const chunks: Uint8Array[] = [];
+export async function collect<T>(stream: AsyncIterable<T>) {
+    const chunks: T[] = [];
     for await (const chunk of stream) {
         chunks.push(chunk);
     }

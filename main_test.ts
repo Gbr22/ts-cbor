@@ -2,7 +2,8 @@ import { assertEquals } from "@std/assert";
 import { consumeByteString, Decoder, DecoderEvent, decoderFromStream, LiteralEvent } from "./main.ts";
 import { MajorType, parseDecoder } from "./main.ts";
 import { writeByteStream, writePrimitive } from "./encoder.ts";
-import { bytesToStream, byteStringToStream, byteWritableStream, collectBytes, iterableToStream, joinBytes, stringToBytes } from "./utils.ts";
+import { bytesToStream, byteStringToStream, byteWritableStream, collect, collectBytes, iterableToStream, joinBytes, stringToBytes } from "./utils.ts";
+import { consumeTextString } from "./decoder/text-string.ts";
 
 function stripWhitespace(s: string) {
     return s.replaceAll(/\s/g,"");
@@ -71,7 +72,7 @@ async function assertDecoderNext(decoder: Decoder): Promise<DecoderEvent> {
     return await assertNext(decoder.events());
 }
 
-async function assertRewrite(value: number | bigint | Uint8Array | boolean | null | undefined) {
+async function assertRewrite(value: number | bigint | Uint8Array | boolean | null | undefined | string) {
     const { getBytes, stream } = byteWritableStream();
     const writer = stream.getWriter();
     await writePrimitive(writer,value);
@@ -218,4 +219,25 @@ Deno.test(async function byteStreamWriteReadTest() {
     const readResult = await collectBytes(consumeByteString(decoder));
 
     assertEquals(readResult,joinBytes(...chunks), "Expect correct byte stream");
+});
+
+Deno.test(async function textStringIdentity() {
+    await assertRewrite("Helló világ");
+});
+
+Deno.test(async function brokenTextTest() {
+    const chunks = [
+        new Uint8Array([0x66]), // String header
+        new Uint8Array([0x6B,0xC3]), // kö
+        new Uint8Array([0xB6, 0x72, 0x74, 0x65]), // örte
+    ];
+    
+    const expectedText = "körte";
+    const stream: ReadableStream<Uint8Array> = iterableToStream(chunks);
+    const decoder = decoderFromStream(stream);
+    const next = await assertNext(decoder.events())
+    assertEquals(next.eventType, "start", "Expect start event");
+    const parts = await collect(consumeTextString(decoder));
+    const resultText = parts.join("");
+    assertEquals(resultText,expectedText,"Expect correct text");
 });

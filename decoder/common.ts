@@ -15,7 +15,7 @@ export const Mode = Object.freeze({
 export const SubMode = Object.freeze({
     Normal: 0,
     ReadingIndefiniteByteString: 1,
-    ReadingIndefiniteUnicodeString: 2,
+    ReadingIndefiniteTextString: 2,
 });
 
 export type ReaderState = {
@@ -32,6 +32,7 @@ export type ReaderState = {
 	argumentBytes: number[]
 	isIndefinite: boolean
 	byteArrayNumberOfBytesToRead: number
+    unsafeTextSlice: Uint8Array
 };
 
 export function createReaderState(reader: ReadableStreamDefaultReader<Uint8Array>): ReaderState {
@@ -49,5 +50,6 @@ export function createReaderState(reader: ReadableStreamDefaultReader<Uint8Array
         argumentBytes: [],
         isIndefinite: false,
         byteArrayNumberOfBytesToRead: 0,
+        unsafeTextSlice: new Uint8Array(),
     }
 }

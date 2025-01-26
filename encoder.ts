@@ -69,7 +69,7 @@ export async function writeByteStream(writer: Writer, stream: ReadableStream<Uin
     await writeHeader(writer, MajorType.SimpleValue, 31);
 }
 
-export async function writePrimitive(writer: Writer, value: number | bigint | Uint8Array | ReadableStream<Uint8Array> | boolean | null | undefined) {
+export async function writePrimitive(writer: Writer, value: number | bigint | Uint8Array | ReadableStream<Uint8Array> | boolean | null | undefined | string) {
     if (typeof value === "number" || typeof value === "bigint") {
         let newValue = value;
         if (newValue < 0) {
@@ -88,8 +88,10 @@ export async function writePrimitive(writer: Writer, value: number | bigint | Ui
         await writeByteString(writer, value);
         return;
     }
-    if (value instanceof ReadableStream) {
-        await writeByteStream(writer, value);
+    if (typeof value === "string") {
+        const buffer = new TextEncoder().encode(value);
+        await writeArgument(writer, MajorType.TextString, buffer.byteLength);
+        await writer.write(buffer);
         return;
     }
     if (value === false) {
