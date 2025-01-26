@@ -20,6 +20,7 @@ export type IntegerLiteralEvent = {
 };
 export type StartEvent = {
     eventType: "start",
+    length: number | undefined,
     majorType: typeof MajorType["ByteString"],
 };
 export type EndEvent = {

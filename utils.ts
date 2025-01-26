@@ -1,13 +1,9 @@
 export async function collect(stream: AsyncIterable<Uint8Array>) {
-    const reader = stream[Symbol.asyncIterator]();
     const chunks: Uint8Array[] = [];
-    while (true) {
-        const { done, value } = await reader.next();
-        if (done) {
-            return chunks;
-        }
-        chunks.push(value);
+    for await (const chunk of stream) {
+        chunks.push(chunk);
     }
+    return chunks;
 };
 
 export function joinBytes(...byteArrays: Uint8Array[]) {

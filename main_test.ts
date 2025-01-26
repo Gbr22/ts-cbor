@@ -3,7 +3,7 @@ import { consumeByteString, decoderFromStream, LiteralEvent } from "./main.ts";
 import { MajorType } from "./main.ts";
 import { writeByteStream, writePrimitive } from "./encoder.ts";
 import { parseDecoder } from "./decoder.ts";
-import { bytesToStream, byteStringToStream, byteWritableStream, collectBytes, iterableToStream, stringToBytes } from "./utils.ts";
+import { bytesToStream, byteStringToStream, byteWritableStream, collectBytes, iterableToStream, joinBytes, stringToBytes } from "./utils.ts";
 
 function stripWhitespace(s: string) {
     return s.replaceAll(/\s/g,"");
@@ -197,4 +197,23 @@ Deno.test(async function byteStreamWriteTest() {
         FF         # primitive(*)
     `);
     assertEquals(result,expected, "Expect correct byte stream");
+});
+
+Deno.test(async function byteStreamWriteReadTest() {
+    const chunks = [
+        new Uint8Array([1,2,3]),
+        new Uint8Array([4,5,6]),
+        new Uint8Array([7,8,9]),
+    ];
+    const stream: ReadableStream<Uint8Array> = iterableToStream(chunks);
+    const { getBytes, stream: writerStream } = byteWritableStream();
+    const writer = writerStream.getWriter();
+    await writeByteStream(writer,stream);
+    const writeResult = await getBytes();
+    const decoder = decoderFromStream(bytesToStream(writeResult));
+    const next = await assertNext(await decoder[Symbol.asyncIterator]())
+    assertEquals(next.eventType, "start", "Expect start event");
+    const readResult = await collectBytes(consumeByteString(decoder));
+
+    assertEquals(readResult,joinBytes(...chunks), "Expect correct byte stream");
 });

@@ -13,27 +13,32 @@ const Mode = Object.freeze({
 	ReadingData: 2,
 });
 
+const SubMode = Object.freeze({
+	Normal: 0,
+	ReadingIndefiniteByteString: 1,
+});
+
 export async function* consumeByteString(decoder: Decoder): AsyncIterableIterator<Uint8Array,void,void> {
-	const iterator = decoder[Symbol.asyncIterator]();
 	let counter = 1;
-    while (true) {
-        const { done, value } = await iterator.next();
-        if (done) {
-            break;
-        }
-        if (value.eventType === "start") {
+
+	for await (const value of decoder) {
+		if (value.majorType != MajorType.ByteString) {
+			throw new Error(`Unexpected major type ${value.majorType} while reading byte string`);
+		}
+		if (value.eventType === "start") {
             counter++;
         }
         if (value.eventType === "end") {
             counter--;
         }
         if (counter === 0) {
-            break;
+            return;
         }
         if (value.eventType === "data") {
 			yield value.data;
         }
-    }
+	}
+	throw new Error(`Unexpected end of stream counter: ${counter}`);
 }
 
 export async function parseDecoder<T>(decoder: Decoder): Promise<T> {
@@ -59,6 +64,7 @@ type ReaderState = {
 	isReaderDone: boolean,
 	currentBuffer: Uint8Array
 	mode: number
+	subMode: number
 	index: number
 	majorType: number
 	additionalInfo: number
@@ -75,6 +81,7 @@ function createReaderState(reader: ReadableStreamDefaultReader<Uint8Array>): Rea
 		isReaderDone: false,
 		currentBuffer: new Uint8Array(),
 		mode: Mode.ExpectingDataItem,
+		subMode: NaN,
 		index: 0,
 		majorType: NaN,
 		additionalInfo: NaN,
@@ -144,6 +151,7 @@ function flushHeaderAndArgument(state: ReaderState) {
 		}
 		IterationControl.yield({
 			eventType: "start",
+			length: state.byteArrayNumberOfBytesToRead,
 			majorType: MajorType.ByteString,
 		});
 	}
@@ -187,8 +195,26 @@ async function handleExpectingDataItemMode(state: ReaderState) {
 	}
 	if (state.additionalInfo == 31) {
 		state.isIndefinite = true;
-	}
-	if (state.isIndefinite && isNumerical(state.majorType)) {
+		state.numberOfBytesToRead = 0;
+		if (state.majorType == MajorType.ByteString) {
+			state.mode = Mode.ExpectingDataItem;
+			state.subMode = SubMode.ReadingIndefiniteByteString;
+			IterationControl.yield({
+				eventType: "start",
+				length: undefined,
+				majorType: MajorType.ByteString,
+			});
+		}
+		if (state.majorType == MajorType.SimpleValue) {
+			state.mode = Mode.ExpectingDataItem;
+			if (state.subMode == SubMode.ReadingIndefiniteByteString) {
+				IterationControl.yield({
+					eventType: "end",
+					majorType: MajorType.ByteString
+				});
+			}
+			throw new Error(`Unexpected stop code`);
+		}
 		throw new Error(`Major Type ${state.majorType} cannot be isIndefinite`);
 	}
 }
