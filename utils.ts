@@ -1,0 +1,69 @@
+export async function collect(stream: AsyncIterable<Uint8Array>) {
+    const reader = stream[Symbol.asyncIterator]();
+    const chunks: Uint8Array[] = [];
+    while (true) {
+        const { done, value } = await reader.next();
+        if (done) {
+            return chunks;
+        }
+        chunks.push(value);
+    }
+};
+
+export function joinBytes(...byteArrays: Uint8Array[]) {
+    const totalLength = byteArrays.reduce((acc, b) => acc + b.byteLength, 0);
+    const bytes = new Uint8Array(totalLength);
+    let offset = 0;
+    for (const array of byteArrays) {
+        bytes.set(array, offset);
+        offset += array.byteLength;
+    }
+    return bytes;
+}
+
+export async function collectBytes(stream: AsyncIterable<Uint8Array>) {
+    const parts = await collect(stream);
+    return joinBytes(...parts);
+}
+
+export function iterableToStream<T>(it: Iterable<T>) {
+    return new ReadableStream({
+        start(controller) {
+            for (const item of it) {
+                controller.enqueue(item);
+            }
+            controller.close();
+        }
+    });
+}
+
+export function bytesToStream(bytes: Uint8Array, bufferSize: number = 5) {
+    const count = bytes.length / bufferSize;
+    const it = function*() {
+        for (let i = 0; i < count; i++) {
+            yield bytes.slice(i * bufferSize, (i + 1) * bufferSize);
+        }
+    }();
+    return iterableToStream(it);
+}
+
+export function byteStringToStream(str: string, bufferSize: number = 5) {
+    const bytes = new Uint8Array(str.length);
+    bytes.set(str.split("").map(c => c.charCodeAt(0)));
+    return bytesToStream(bytes, bufferSize);
+}
+export function byteWritableStream() {
+    const bytes: Uint8Array[] = [];
+    return {
+        getBytes() {
+            return joinBytes(...bytes);
+        },
+        stream: new WritableStream({
+            async write(value: Uint8Array) {
+                bytes.push(value);
+            },
+            async close() {
+            }
+        })
+    }
+}

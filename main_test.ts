@@ -3,75 +3,7 @@ import { consumeByteString, decoderFromStream, LiteralEvent } from "./main.ts";
 import { MajorType } from "./main.ts";
 import { encoderFromStream } from "./encoder.ts";
 import { parseDecoder } from "./decoder.ts";
-
-async function collect(stream: AsyncIterable<Uint8Array>) {
-    const reader = stream[Symbol.asyncIterator]();
-    const chunks: Uint8Array[] = [];
-    while (true) {
-        const { done, value } = await reader.next();
-        if (done) {
-            return chunks;
-        }
-        chunks.push(value);
-    }
-};
-
-function joinBytes(...byteArrays: Uint8Array[]) {
-    const totalLength = byteArrays.reduce((acc, b) => acc + b.byteLength, 0);
-    const bytes = new Uint8Array(totalLength);
-    let offset = 0;
-    for (const array of byteArrays) {
-        bytes.set(array, offset);
-        offset += array.byteLength;
-    }
-    return bytes;
-}
-
-async function collectBytes(stream: AsyncIterable<Uint8Array>) {
-    const parts = await collect(stream);
-    return joinBytes(...parts);
-}
-function iterableToStream<T>(it: Iterable<T>) {
-    return new ReadableStream({
-        start(controller) {
-            for (const item of it) {
-                controller.enqueue(item);
-            }
-            controller.close();
-        }
-    });
-}
-
-function bytesToStream(bytes: Uint8Array, bufferSize: number = 5) {
-    const count = bytes.length / bufferSize;
-    const it = function*() {
-        for (let i = 0; i < count; i++) {
-            yield bytes.slice(i * bufferSize, (i + 1) * bufferSize);
-        }
-    }();
-    return iterableToStream(it);
-}
-
-function byteStringToStream(str: string, bufferSize: number = 5) {
-    const bytes = new Uint8Array(str.length);
-    bytes.set(str.split("").map(c => c.charCodeAt(0)));
-    return bytesToStream(bytes, bufferSize);
-}
-function byteWritableStream() {
-    const bytes: Uint8Array[] = [];
-    return {
-        getBytes() {
-            return joinBytes(...bytes);
-        },
-        stream: new WritableStream({
-            async write(value: Uint8Array) {
-                bytes.push(value);
-            },
-            async close() {
-            }
-        })
-    }
-}
+import { bytesToStream, byteStringToStream, byteWritableStream, collectBytes } from "./utils.ts";
 
 function stripWhitespace(s: string) {
     return s.replaceAll(/\s/g,"");
@@ -116,7 +48,7 @@ async function assertNext<T>(iterator: AsyncIterableIterator<T>): Promise<T> {
     return value;
 }
 
-async function assertRewrite(value: number | bigint) {
+async function assertRewrite(value: number | bigint | Uint8Array) {
     const { getBytes, stream } = byteWritableStream();
     const encoder = encoderFromStream(stream);
     await encoder.writePrimitive(value);
@@ -191,4 +123,14 @@ Deno.test(async function negativeNumberIdentity() {
     await assertRewrite(-0xFFFF_FFFF);
     await assertRewrite(-0xFFFF_FFFFn-2n);
     await assertRewrite(-0xFFFF_FFFF_FFFF_FFFFn);
+});
+
+Deno.test(async function byteStringIdentity() {
+    await assertRewrite(new Uint8Array([1,2,3,4,5]));
+});
+
+Deno.test(async function constructedByteStringIdentity() {
+    const testText = "Hello, World!";
+    const data = new TextEncoder().encode(testText);
+    await assertRewrite(data);
 });

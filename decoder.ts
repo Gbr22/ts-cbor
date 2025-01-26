@@ -1,17 +1,20 @@
 import { isNumerical, MajorType } from "./common.ts";
 import { DecoderEvent } from "./events.ts";
 import { IterationControl } from "./iteration-control.ts";
+import { collectBytes } from "./utils.ts";
 
 export interface Decoder {
 	[Symbol.asyncIterator](): AsyncIterator<DecoderEvent>;
 }
 
 const Mode = Object.freeze({
-	ExpectingDataItem: -1,
-	MajorType: 0,
+	ExpectingDataItem: 0,
+	ReadingArgument: 1,
+	ReadingData: 2,
 });
 
-export async function* consumeByteString(iterator: AsyncIterableIterator<DecoderEvent,void,void>): AsyncIterableIterator<Uint8Array,void,void> {
+export async function* consumeByteString(decoder: Decoder): AsyncIterableIterator<Uint8Array,void,void> {
+	const iterator = decoder[Symbol.asyncIterator]();
 	let counter = 1;
     while (true) {
         const { done, value } = await iterator.next();
@@ -40,6 +43,11 @@ export async function parseDecoder<T>(decoder: Decoder): Promise<T> {
 	for await (const event of decoder) {
 		if (event.eventType === "literal") {
 			return event.data as T;
+		}
+		if (event.eventType === "start" && event.majorType === MajorType.ByteString) {
+			const it = await consumeByteString(decoder);
+			const bytes = await collectBytes(it);
+			return bytes as T;
 		}
 	}
 
@@ -74,7 +82,7 @@ function createReaderState(reader: ReadableStreamDefaultReader<Uint8Array>): Rea
 	}
 }
 
-function flushNumber(state: ReaderState) {
+function flushHeaderAndArgument(state: ReaderState) {
 	if (isNumerical(state.majorType)) {
 		state.mode = Mode.ExpectingDataItem;
 		if (state.majorType === MajorType.NegativeInteger) {
@@ -86,11 +94,12 @@ function flushNumber(state: ReaderState) {
 		}
 		IterationControl.yield({
 			eventType: "literal",
-			majorType: state.majorType as any,
+			majorType: state.majorType,
 			data: state.numberValue,
 		});
 	}
 	if (state.majorType == MajorType.ByteString) {
+		state.mode = Mode.ReadingData;
 		state.byteArrayNumberOfBytesToRead = Number(state.numberValue);
 		if (state.numberValue > Number.MAX_SAFE_INTEGER) {
 			throw new Error("Array too large");
@@ -100,19 +109,20 @@ function flushNumber(state: ReaderState) {
 			majorType: MajorType.ByteString,
 		});
 	}
+	throw new Error("Invalid major type");
 }
 
 async function handleReadDataItemFirstByte(state: ReaderState) {
 	const byte = state.currentBuffer[state.index];
 	state.index++;
 	state.majorType = byte >>> 5;
-	state.mode = Mode.MajorType;
+	state.mode = Mode.ReadingArgument;
 	state.additionalInfo = byte & 0b00011111;
 	state.numberValue = 0;
 	if (state.additionalInfo < 24) {
 		state.numberOfBytesToRead = 0;
 		state.numberValue = state.additionalInfo;
-		flushNumber(state);
+		flushHeaderAndArgument(state);
 	}
 	if (state.additionalInfo == 24) {
 		state.numberOfBytesToRead = 1;
@@ -138,7 +148,7 @@ async function handleReadDataItemFirstByte(state: ReaderState) {
 		throw new Error(`Major Type ${state.majorType} cannot be isIndefinite`);
 	}
 }
-async function handleReadExtendedCount(state: ReaderState) {
+async function handleReadArgument(state: ReaderState) {
 	const byte = state.currentBuffer[state.index];
 	state.index++;
 	if (typeof state.numberValue == "bigint") {
@@ -149,12 +159,13 @@ async function handleReadExtendedCount(state: ReaderState) {
 	
 	state.numberOfBytesToRead--;
 	if (state.numberOfBytesToRead == 0) {
-		flushNumber(state);
+		flushHeaderAndArgument(state);
 	}
 }
 
 async function handleByteStringData(state: ReaderState) {
 	if (state.byteArrayNumberOfBytesToRead <= 0) {
+		state.mode = Mode.ExpectingDataItem;
 		IterationControl.yield({
 			eventType: "end",
 			majorType: MajorType.ByteString,
@@ -171,15 +182,19 @@ async function handleByteStringData(state: ReaderState) {
 }
 
 async function handleDecoderIterationData(state: ReaderState) {
-	if (state.mode == Mode.MajorType && state.majorType == MajorType.ByteString) {
+	if (state.mode == Mode.ReadingData && state.majorType == MajorType.ByteString) {
 		await handleByteStringData(state);
+		return;
 	}
 	else if (state.mode == Mode.ExpectingDataItem) {
 		await handleReadDataItemFirstByte(state);
+		return;
 	}
-	else if (state.mode == Mode.MajorType && state.numberOfBytesToRead > 0) {
-		await handleReadExtendedCount(state);
+	else if (state.mode == Mode.ReadingArgument && state.numberOfBytesToRead > 0) {
+		await handleReadArgument(state);
+		return;
 	}
+	throw new Error(`Invalid state ${JSON.stringify(state)}`);
 }
 
 async function handleDecoderIteration(state: ReaderState) {

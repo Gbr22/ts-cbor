@@ -48,7 +48,7 @@ export async function writeArgument(writer: Writer, majorType: number, number: n
     throw new Error(`Number too large: ${number}`);
 }
 
-export async function writePrimitive(writer: Writer, value: number | bigint) {
+export async function writePrimitive(writer: Writer, value: number | bigint | Uint8Array) {
     if (typeof value === "number" || typeof value === "bigint") {
         let newValue = value;
         if (newValue < 0) {
@@ -61,6 +61,10 @@ export async function writePrimitive(writer: Writer, value: number | bigint) {
         }
         const type = value < 0 ? MajorType.NegativeInteger : MajorType.UnsignedInteger;
         await writeArgument(writer, type, newValue);
+    }
+    if (value instanceof Uint8Array) {
+        await writeArgument(writer, MajorType.ByteString, value.byteLength);
+        await writer.write(value);
     }
 }
 
