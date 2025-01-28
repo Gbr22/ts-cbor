@@ -34,6 +34,7 @@ export {
 	writeSimpleValue,
 	type WritableValue,
 	type ReadableValue,
+	type AsyncWriter,
 } from "./encoder.ts";
 export {
 	parseDecoder

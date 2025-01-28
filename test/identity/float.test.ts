@@ -1,6 +1,6 @@
 import { assertEquals } from "@std/assert/equals";
 import { decodeFloat, decoderFromStream, FloatLiteralEvent, MajorType, writeFloat16, writeFloat32, writeFloat64, decodeNumberEvent } from "../../main.ts";
-import { assertNext, assertRewrite, bytesToStream, byteWritableStream } from "../../test_utils.ts";
+import { assertNext, assertWriteReadIdentity, bytesToStream, byteWritableStream } from "../../test_utils.ts";
 import { assertAlmostEquals } from "@std/assert/almost-equals";
 
 async function floatTest(writeFloat: (writer: WritableStreamDefaultWriter<Uint8Array>, value: number)=>Promise<void>, value: number, tolerance: number) {
@@ -36,5 +36,5 @@ Deno.test(async function float64IdentityTest() {
 });
 
 Deno.test(async function floatIdentityTest() {
-    await assertRewrite(0.123456789);
+    await assertWriteReadIdentity(0.123456789);
 });

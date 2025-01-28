@@ -1,10 +1,10 @@
 import { assertEquals } from "@std/assert/equals";
 import { consumeTextString, decoderFromStream, writeTextStream } from "../../main.ts";
-import { assertNext, assertRewrite, bytesToStream, byteWritableStream } from "../../test_utils.ts";
+import { assertNext, assertWriteReadIdentity, bytesToStream, byteWritableStream } from "../../test_utils.ts";
 import { collect, iterableToStream } from "../../utils.ts";
 
 Deno.test(async function textStringIdentityTest() {
-    await assertRewrite("Helló világ");
+    await assertWriteReadIdentity("Helló világ");
 });
 
 Deno.test(async function textStringStreamIdentityTest() {

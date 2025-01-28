@@ -1,12 +1,12 @@
 import { assertEquals } from "@std/assert/equals";
 import { decoderFromStream, MajorType, SimpleValueLiteralEvent, writeSimpleValue } from "../../main.ts";
-import { assertNext, assertRewrite, bytesToStream, byteWritableStream } from "../../test_utils.ts";
+import { assertNext, assertWriteReadIdentity, bytesToStream, byteWritableStream } from "../../test_utils.ts";
 
 Deno.test(async function simpleValueInterpretedIdentityTest() {
-    await assertRewrite(false);
-    await assertRewrite(true);
-    await assertRewrite(null);
-    await assertRewrite(undefined);
+    await assertWriteReadIdentity(false);
+    await assertWriteReadIdentity(true);
+    await assertWriteReadIdentity(null);
+    await assertWriteReadIdentity(undefined);
 });
 
 Deno.test(async function simpleValueNumericIdentityTest() {

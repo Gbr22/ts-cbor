@@ -1,10 +1,9 @@
-import { assertEquals } from "@std/assert/equals";
-import { consumeByteString, decoderFromStream, writeByteStream } from "../../main.ts";
-import { assertNext, assertRewrite, bytesToStream, byteWritableStream } from "../../test_utils.ts";
-import { collectBytes, iterableToStream, joinBytes } from "../../utils.ts";
+import { writeByteStream } from "../../main.ts";
+import { assertWriteReadIdentity, writeThenAssertParsedValueEquals } from "../../test_utils.ts";
+import { iterableToStream, concatBytes } from "../../utils.ts";
 
 Deno.test(async function byteStringIdentityTest() {
-    await assertRewrite(new Uint8Array([1,2,3,4,5]));
+    await assertWriteReadIdentity(new Uint8Array([1,2,3,4,5]));
 });
 
 Deno.test(async function largeByteStringIdentityTest() {
@@ -12,7 +11,7 @@ Deno.test(async function largeByteStringIdentityTest() {
     for (let i=0; i < buffer.length; i++) {
         buffer[i] = i & 255;
     }
-    await assertRewrite(buffer);
+    await assertWriteReadIdentity(buffer);
 });
 
 Deno.test(async function byteStringStreamIdentityTest() {
@@ -22,14 +21,5 @@ Deno.test(async function byteStringStreamIdentityTest() {
         new Uint8Array([7,8,9]),
     ];
     const stream: ReadableStream<Uint8Array> = iterableToStream(chunks);
-    const { getBytes, stream: writerStream } = byteWritableStream();
-    const writer = writerStream.getWriter();
-    await writeByteStream(writer,stream);
-    const writeResult = await getBytes();
-    const decoder = decoderFromStream(bytesToStream(writeResult));
-    const next = await assertNext(decoder.events())
-    assertEquals(next.eventType, "start", "Expect start event");
-    const readResult = await collectBytes(consumeByteString(decoder));
-
-    assertEquals(readResult,joinBytes(...chunks), "Expect correct bytes");
+    await writeThenAssertParsedValueEquals(writeByteStream,[stream],concatBytes(...chunks));
 });

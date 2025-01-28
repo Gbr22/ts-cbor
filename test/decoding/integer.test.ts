@@ -3,7 +3,7 @@ import { hex, parseTest } from "../../test_utils.ts";
 Deno.test(async function parseTinyPositiveIntTest() {
     // Integers between [0; 23] are encoded as as themselves
     for (let i=0; i < 24; i++) {
-        await parseTest(String.fromCharCode(i), i);
+        await parseTest(new Uint8Array([i]), i);
     }
 });
 

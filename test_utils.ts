@@ -1,30 +1,30 @@
 import { assertEquals } from "@std/assert/equals";
-import { decoderFromStream, parseDecoder, WritableValue, writeValue } from "./main.ts";
-import { iterableToStream, joinBytes } from "./utils.ts";
+import { AsyncWriter, decoderFromStream, parseDecoder, WritableValue, writeValue } from "./main.ts";
+import { iterableToStream, concatBytes } from "./utils.ts";
 
 export function stripWhitespace(s: string) {
     return s.replaceAll(/\s/g,"");
 }
 
 export function concat(templateStringsArray: TemplateStringsArray, ...expr: (Uint8Array | string)[]) {
-    const strings = [...templateStringsArray];
-    let newString = "";
+    const strings = [...templateStringsArray].map(stringToBytes);
+    
+    const arrays: Uint8Array[] = [];
     while (expr.length > 0) {
-        const s = strings.shift() || "";
+        const s = strings.shift() || new Uint8Array();
         const e = expr.shift();
-        newString += s;
+        arrays.push(s);
         if (e instanceof Uint8Array) {
-            newString += String.fromCharCode(...e);
+            arrays.push(e);
         } else if (typeof e === "string") {
-            newString += e;
+            arrays.push(stringToBytes(e));
         }
     }
-    const result = newString+strings.join("");
+    const result = concatBytes(...arrays,...strings);
     return result;
 }
 
 export function hex(input: TemplateStringsArray, ..._: unknown[]) {
-    let newString = "";
     const inputString = input.join();
     const inputChars = inputString.split("");
     let isComment = false;
@@ -45,18 +45,19 @@ export function hex(input: TemplateStringsArray, ..._: unknown[]) {
         }
         hex += char;
     }
-
-    for (let i=0; i < hex.length; i+=2) {
-        const hexByte = hex.substring(i,i+2).padEnd(2,"0");
+    const bytes = new Uint8Array(hex.length / 2);
+    for (let arrayIndex=0; arrayIndex < hex.length / 2; arrayIndex++) {
+        const hexIndex = arrayIndex * 2;
+        const hexByte = hex.substring(hexIndex,hexIndex+2).padEnd(2,"0");
         const byte = parseInt(hexByte,16);
-        newString += String.fromCharCode(byte);
+        bytes[arrayIndex] = byte;
     }
-    return newString;
+    return bytes;
 }
 
 export function b(input: TemplateStringsArray, ..._: unknown[]){
     const byte = parseInt(stripWhitespace(input.join("")),2);
-    return String.fromCharCode(byte);
+    return new Uint8Array([byte]);
 }
 
 export async function assertNext<T>(iterator: AsyncIterableIterator<T>): Promise<T> {
@@ -65,8 +66,8 @@ export async function assertNext<T>(iterator: AsyncIterableIterator<T>): Promise
     return value;
 }
 
-export async function parseTest(bytes: string, value: unknown) {
-    const decoder = decoderFromStream(byteStringToStream(bytes));
+export async function parseTest(bytes: Uint8Array, value: unknown) {
+    const decoder = decoderFromStream(bytesToStream(bytes));
     const result = await parseDecoder(decoder);
     assertEquals(result, value, "Expect correct value");
 }
@@ -91,7 +92,7 @@ export function byteStringToStream(str: string, bufferSize: number = 5) {
     return bytesToStream(stringToBytes(str), bufferSize);
 }
 
-export async function assertRewrite(value: WritableValue) {
+export async function assertWriteReadIdentity(value: WritableValue) {
     const { getBytes, stream } = byteWritableStream();
     const writer = stream.getWriter();
     await writeValue(writer,value);
@@ -106,7 +107,7 @@ export function byteWritableStream() {
     const bytes: Uint8Array[] = [];
     return {
         getBytes() {
-            return joinBytes(...bytes);
+            return concatBytes(...bytes);
         },
         stream: new WritableStream({
             async write(value: Uint8Array) {
@@ -116,4 +117,46 @@ export function byteWritableStream() {
             }
         })
     }
+}
+
+export function bytesToDecoder(bytes: Uint8Array) {
+    const decoder = decoderFromStream(bytesToStream(bytes));
+    return decoder;
+}
+
+type DropFirst<T extends unknown[]> = T extends [any, ...infer Rest] ? Rest : never
+export async function writeAndReturnBytes<
+    Fn extends (
+        writer: AsyncWriter,
+        ...args: any[]
+    )=>void
+>(fn: Fn, args: DropFirst<Parameters<Fn>>) {
+    const { getBytes, stream } = byteWritableStream();
+    const writer = stream.getWriter();
+    await fn(writer,...args);
+    writer.close();
+    const bytes = getBytes();
+    return bytes;
+}
+
+export async function writeThenAssertBytesEquals<
+    Fn extends (
+        writer: AsyncWriter,
+        ...args: any[]
+    )=>void
+>(fn: Fn, args: DropFirst<Parameters<Fn>>, expected: Uint8Array) {
+    const bytes = await writeAndReturnBytes(fn,args);
+    assertEquals(bytes, expected, "Expect correct bytes");
+}
+
+export async function writeThenAssertParsedValueEquals<
+    Fn extends (
+        writer: AsyncWriter,
+        ...args: any[]
+    )=>void
+>(fn: Fn, args: DropFirst<Parameters<Fn>>, expected: unknown) {
+    const bytes = await writeAndReturnBytes(fn,args);
+    const decoder = decoderFromStream(bytesToStream(bytes));
+    const value = await parseDecoder(decoder);
+    assertEquals(value, expected, "Expect correct value");
 }

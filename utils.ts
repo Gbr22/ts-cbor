@@ -6,7 +6,7 @@ export async function collect<T>(stream: AsyncIterable<T>) {
     return chunks;
 };
 
-export function joinBytes(...byteArrays: Uint8Array[]) {
+export function concatBytes(...byteArrays: Uint8Array[]) {
     const totalLength = byteArrays.reduce((acc, b) => acc + b.byteLength, 0);
     const bytes = new Uint8Array(totalLength);
     let offset = 0;
@@ -19,7 +19,7 @@ export function joinBytes(...byteArrays: Uint8Array[]) {
 
 export async function collectBytes(stream: AsyncIterable<Uint8Array>) {
     const parts = await collect(stream);
-    return joinBytes(...parts);
+    return concatBytes(...parts);
 }
 
 export function iterableToStream<T>(it: Iterable<T>) {
