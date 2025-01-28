@@ -1,6 +1,7 @@
 import { assertEquals } from "@std/assert/equals";
 import { decoderFromStream, MajorType, SimpleValueLiteralEvent, writeSimpleValue } from "../../main.ts";
 import { assertNext, assertWriteReadIdentity, bytesToStream, byteWritableStream } from "../../test_utils.ts";
+import { intoAsyncWriter } from "../../encoder.ts";
 
 Deno.test(async function simpleValueInterpretedIdentityTest() {
     await assertWriteReadIdentity(false);
@@ -17,8 +18,9 @@ Deno.test(async function simpleValueNumericIdentityTest() {
         }
         const simpleValue = index;
         const { getBytes, stream: writerStream } = byteWritableStream();
-        const writer = writerStream.getWriter();
+        const writer = intoAsyncWriter(writerStream.getWriter());
         await writeSimpleValue(writer,simpleValue);
+        await writer.close();
         const writeResult = await getBytes();
         const decoder = decoderFromStream(bytesToStream(writeResult));
         const next = await assertNext(decoder.events())

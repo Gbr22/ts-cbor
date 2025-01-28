@@ -1,12 +1,14 @@
 import { assertEquals } from "@std/assert/equals";
-import { decodeFloat, decoderFromStream, FloatLiteralEvent, MajorType, writeFloat16, writeFloat32, writeFloat64, decodeNumberEvent } from "../../main.ts";
+import { decodeFloat, decoderFromStream, FloatLiteralEvent, MajorType, writeFloat16, writeFloat32, writeFloat64, decodeNumberEvent, AsyncWriter } from "../../main.ts";
 import { assertNext, assertWriteReadIdentity, bytesToStream, byteWritableStream } from "../../test_utils.ts";
 import { assertAlmostEquals } from "@std/assert/almost-equals";
+import { intoAsyncWriter } from "../../encoder.ts";
 
-async function floatTest(writeFloat: (writer: WritableStreamDefaultWriter<Uint8Array>, value: number)=>Promise<void>, value: number, tolerance: number) {
-    const { getBytes, stream: writerStream } = byteWritableStream();
-    const writer = writerStream.getWriter();
+async function floatTest(writeFloat: (writer: AsyncWriter, value: number)=>Promise<void>, value: number, tolerance: number) {
+    const { getBytes, stream } = byteWritableStream();
+    const writer = intoAsyncWriter(stream.getWriter());
     await writeFloat(writer,value);
+    await writer.close();
     const writeResult = await getBytes();
     const decoder = decoderFromStream(bytesToStream(writeResult));
     const next = await assertNext(decoder.events())

@@ -32,3 +32,5 @@ export function iterableToStream<T>(it: Iterable<T>) {
         }
     });
 }
+
+export type DropFirst<T extends unknown[]> = T extends [any, ...infer Rest] ? Rest : never

@@ -35,6 +35,12 @@ export {
 	type WritableValue,
 	type ReadableValue,
 	type AsyncWriter,
+	type AsyncWriterSymbol,
+	type SyncWriter,
+	type SyncWriterSymbol,
+	type WriterReturnType,
+	type WriterErrorType,
+	intoAsyncWriter,
 } from "./encoder.ts";
 export {
 	parseDecoder

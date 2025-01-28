@@ -1,6 +1,7 @@
 import { assertEquals } from "@std/assert/equals";
-import { AsyncWriter, decoderFromStream, parseDecoder, WritableValue, writeValue } from "./main.ts";
-import { iterableToStream, concatBytes } from "./utils.ts";
+import { AsyncWriter, intoAsyncWriter, decoderFromStream, parseDecoder, WritableValue, writeValue, WriterReturnType } from "./main.ts";
+import { iterableToStream, concatBytes, DropFirst } from "./utils.ts";
+import { intoSyncWriter, SyncWriter } from "./encoder.ts";
 
 export function stripWhitespace(s: string) {
     return s.replaceAll(/\s/g,"");
@@ -92,15 +93,34 @@ export function byteStringToStream(str: string, bufferSize: number = 5) {
     return bytesToStream(stringToBytes(str), bufferSize);
 }
 
-export async function assertWriteReadIdentity(value: WritableValue) {
+export async function assertWriteReadIdentityAsync(value: WritableValue) {
     const { getBytes, stream } = byteWritableStream();
-    const writer = stream.getWriter();
+    const writer = intoAsyncWriter(stream.getWriter());
     await writeValue(writer,value);
     await writer.close();
     const bytes = getBytes();
     const decoder = decoderFromStream(bytesToStream(bytes));
     const newValue = await parseDecoder(decoder);
     assertEquals(newValue, value, "Expect value to be rewritten correctly");
+}
+
+export async function assertWriteReadIdentitySync(value: WritableValue) {
+    const bytesArray: Uint8Array[] = [];
+    const writer = intoSyncWriter({
+        write(value: Uint8Array) {
+            bytesArray.push(value);
+        }
+    });
+    writeValue(writer,value);
+    const bytes = concatBytes(...bytesArray);
+    const decoder = decoderFromStream(bytesToStream(bytes));
+    const newValue = await parseDecoder(decoder);
+    assertEquals(newValue, value, "Expect value to be rewritten correctly");
+}
+
+export async function assertWriteReadIdentity(value: WritableValue) {
+    await assertWriteReadIdentitySync(value);
+    await assertWriteReadIdentityAsync(value);
 }
 
 export function byteWritableStream() {
@@ -124,15 +144,14 @@ export function bytesToDecoder(bytes: Uint8Array) {
     return decoder;
 }
 
-type DropFirst<T extends unknown[]> = T extends [any, ...infer Rest] ? Rest : never
 export async function writeAndReturnBytes<
     Fn extends (
         writer: AsyncWriter,
         ...args: any[]
     )=>void
->(fn: Fn, args: DropFirst<Parameters<Fn>>) {
+>(fn: Fn, args: DropFirst<Parameters<Fn>>): Promise<Uint8Array> {
     const { getBytes, stream } = byteWritableStream();
-    const writer = stream.getWriter();
+    const writer = intoAsyncWriter(stream.getWriter());
     await fn(writer,...args);
     writer.close();
     const bytes = getBytes();
