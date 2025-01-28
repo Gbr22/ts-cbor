@@ -1,7 +1,7 @@
 import { AdditionalInfo, isIntegerMajorType, MajorType } from "../common.ts";
 import { IterationControl } from "../iteration-control.ts";
 import { SimpleValueLiteralEvent } from "../main.ts";
-import { Mode, ReaderState } from "./common.ts";
+import { DecoderSymbol, Mode, ReaderState } from "./common.ts";
 import { FloatLiteralEvent, IntegerLiteralEvent, StartEvent, TagLiteralEvent } from "./events.ts";
 import { yieldEndOfDataItem } from "./iterating.ts";
 import { decodeUint } from "./numbers.ts";
@@ -17,6 +17,7 @@ export function flushHeaderAndArgument(state: ReaderState) {
 				eventType: "literal",
 				majorType: MajorType.Tag,
 				data: state.argumentBytes,
+				[DecoderSymbol]: state.decoder!,
 			});
 		}
 		let array = state.argumentBytes;
@@ -27,6 +28,7 @@ export function flushHeaderAndArgument(state: ReaderState) {
 			eventType: "literal",
 			majorType: state.majorType as IntegerLiteralEvent["majorType"],
 			data: array,
+			[DecoderSymbol]: state.decoder!,
 		});
 	}
 	if (state.majorType == MajorType.SimpleValue) {
@@ -37,6 +39,7 @@ export function flushHeaderAndArgument(state: ReaderState) {
 				simpleValueType: "float",
 				majorType: MajorType.SimpleValue,
 				data: state.argumentBytes,
+				[DecoderSymbol]: state.decoder!,
 			});
 		}
 		if (state.argumentBytes.length > 0) {
@@ -52,6 +55,7 @@ export function flushHeaderAndArgument(state: ReaderState) {
 			majorType: MajorType.SimpleValue,
 			simpleValueType: "simple",
 			data: numberValue,
+			[DecoderSymbol]: state.decoder!,
 		});
 	}
 	if (state.majorType == MajorType.ByteString) {
@@ -67,6 +71,7 @@ export function flushHeaderAndArgument(state: ReaderState) {
 			eventType: "start",
 			length: state.byteArrayNumberOfBytesToRead,
 			majorType: MajorType.ByteString,
+			[DecoderSymbol]: state.decoder!,
 		});
 	}
 	if (state.majorType == MajorType.TextString) {
@@ -83,6 +88,7 @@ export function flushHeaderAndArgument(state: ReaderState) {
 			eventType: "start",
 			length: state.byteArrayNumberOfBytesToRead,
 			majorType: MajorType.TextString,
+			[DecoderSymbol]: state.decoder!,
 		});
 	}
 	if (state.majorType == MajorType.Array) {
@@ -96,6 +102,7 @@ export function flushHeaderAndArgument(state: ReaderState) {
 			eventType: "start",
 			length: state.numberValue,
 			majorType: MajorType.Array,
+			[DecoderSymbol]: state.decoder!,
 		});
 	}
 	if (state.majorType == MajorType.Map) {
@@ -110,6 +117,7 @@ export function flushHeaderAndArgument(state: ReaderState) {
 			eventType: "start",
 			length: state.numberValue,
 			majorType: MajorType.Map,
+			[DecoderSymbol]: state.decoder!,
 		});
 	}
 	throw new Error(`Unexpected major type ${state.majorType} while handling end of header/argument`);

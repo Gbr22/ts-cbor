@@ -49,7 +49,9 @@ export {
 	decoderFromStream
 } from "./decoder/iterating.ts";
 export {
-	type Decoder
+	type Decoder,
+	DecoderSymbol,
+	type DecoderLike,
 } from "./decoder/common.ts";
 export {
 	type DecoderEvent,

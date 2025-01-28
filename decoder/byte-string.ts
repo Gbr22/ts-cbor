@@ -1,6 +1,6 @@
 import { MajorType } from "../common.ts";
 import { IterationControl } from "../iteration-control.ts";
-import { Decoder, Mode, ReaderState } from "./common.ts";
+import { Decoder, DecoderLike, DecoderSymbol, Mode, ReaderState } from "./common.ts";
 import { DataEvent, EndEvent } from "./events.ts";
 import { yieldEndOfDataItem } from "./iterating.ts";
 
@@ -10,6 +10,7 @@ export async function handleByteStringData(state: ReaderState) {
         yieldEndOfDataItem<EndEvent>(state,{
             eventType: "end",
             majorType: MajorType.ByteString,
+            [DecoderSymbol]: state.decoder!
         });
     }
     if (state.isReaderDone) {
@@ -24,14 +25,15 @@ export async function handleByteStringData(state: ReaderState) {
             eventType: "data",
             majorType: MajorType.ByteString,
             data: slice,
+            [DecoderSymbol]: state.decoder!
         });
     }
 }
 
-export async function* consumeByteString(decoder: Decoder): AsyncIterableIterator<Uint8Array,void,void> {
+export async function* consumeByteString(decoder: DecoderLike): AsyncIterableIterator<Uint8Array,void,void> {
     let counter = 1;
 
-    for await (const value of decoder.events()) {
+    for await (const value of decoder[DecoderSymbol].events()) {
         if (value.majorType != MajorType.ByteString) {
             throw new Error(`Unexpected major type ${value.majorType} while reading byte string`);
         }

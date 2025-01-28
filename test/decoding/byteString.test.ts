@@ -7,9 +7,9 @@ Deno.test(async function byteStringDecodeTest() {
     const byteArray = new Uint8Array([1,2,3,4,5]);
     const decoder = decoderFromStream(bytesToStream(concat`${b`010 00101`}${byteArray}`));
     const iterator = decoder.events();
-    const next = await assertNext(iterator);
-    assertEquals(next.eventType, "start", "Expect start event");
-    assertEquals(next.majorType, MajorType.ByteString, "Expect correct major type");
-    const bytes = await collectBytes(consumeByteString(decoder));
+    const event = await assertNext(iterator);
+    assertEquals(event.eventType, "start", "Expect start event");
+    assertEquals(event.majorType, MajorType.ByteString, "Expect correct major type");
+    const bytes = await collectBytes(consumeByteString(event));
     assertEquals(bytes, byteArray, "Expect correct value");
 });

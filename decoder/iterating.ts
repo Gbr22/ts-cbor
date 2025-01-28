@@ -1,7 +1,7 @@
 import { IterationControl } from "../iteration-control.ts";
 import { refreshBuffer } from "./buffer.ts";
 import { checkCollectionEnd } from "./collection.ts";
-import { createReaderState, Mode, ReaderState } from "./common.ts";
+import { createReaderState, Decoder, DecoderSymbol, Mode, ReaderState } from "./common.ts";
 import { DecoderEvent } from "./events.ts";
 import { handleExpectingDataItemMode } from "./expectingDataItemMode.ts";
 import { handleReadingArgumentMode } from "./readingArgumentMode.ts";
@@ -41,7 +41,7 @@ export function yieldEndOfDataItem<Event extends DecoderEvent>(state: ReaderStat
 	IterationControl.yield<DecoderEvent>(event);
 }
 
-export function decoderFromStream(stream: ReadableStream<Uint8Array>) {
+export function decoderFromStream(stream: ReadableStream<Uint8Array>): Decoder {
 	const reader = stream.getReader();
 	const state = createReaderState(reader);
 
@@ -50,7 +50,11 @@ export function decoderFromStream(stream: ReadableStream<Uint8Array>) {
 			await handleDecoderIteration(state);
 		})[Symbol.asyncIterator]();
 	}
-	return {
+	const decoder: Decoder = {
 		events,
-	}	
+		[DecoderSymbol]: undefined as unknown as Decoder,
+	}
+	decoder[DecoderSymbol] = decoder;
+	state.decoder = decoder;
+	return decoder;
 }

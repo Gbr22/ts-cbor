@@ -2,8 +2,16 @@ import { DecoderEvent } from "./events.ts";
 
 export type DecoderEvents = AsyncIterableIterator<DecoderEvent>;
 
+export const DecoderSymbol = Symbol("Decoder");
+export type DecoderSymbol = typeof DecoderSymbol;
+
+export type DecoderLike = {
+    [DecoderSymbol]: Decoder;
+};
+
 export interface Decoder {
     events(): DecoderEvents;
+    [DecoderSymbol]: Decoder;
 }
 
 export const Mode = Object.freeze({
@@ -19,7 +27,8 @@ export const SubMode = Object.freeze({
 });
 
 export type ReaderState = {
-	reader: ReadableStreamDefaultReader<Uint8Array>
+	decoder: Decoder | undefined,
+    reader: ReadableStreamDefaultReader<Uint8Array>
 	isReaderDone: boolean,
 	currentBuffer: Uint8Array
 	mode: number
@@ -40,6 +49,7 @@ export type ReaderState = {
 
 export function createReaderState(reader: ReadableStreamDefaultReader<Uint8Array>): ReaderState {
     return {
+        decoder: undefined,
         reader,
         isReaderDone: false,
         currentBuffer: new Uint8Array(),

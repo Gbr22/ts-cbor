@@ -1,6 +1,6 @@
 import { MajorType } from "../common.ts";
 import { IterationControl } from "../iteration-control.ts";
-import { Decoder, Mode, ReaderState } from "./common.ts";
+import { Decoder, DecoderLike, DecoderSymbol, Mode, ReaderState } from "./common.ts";
 import { DataEvent, EndEvent } from "./events.ts";
 import { yieldEndOfDataItem } from "./iterating.ts";
 
@@ -24,6 +24,7 @@ export async function handleTextStringData(state: ReaderState) {
         yieldEndOfDataItem<EndEvent>(state,{
             eventType: "end",
             majorType: MajorType.TextString,
+            [DecoderSymbol]: state.decoder!
         });
     }
     if (state.isReaderDone) {
@@ -77,14 +78,15 @@ export async function handleTextStringData(state: ReaderState) {
             eventType: "data",
             majorType: MajorType.TextString,
             data: new TextDecoder('UTF-8', { "fatal": true }).decode(safeSlice),
+            [DecoderSymbol]: state.decoder!
         });
     }
 }
 
-export async function* consumeTextString(decoder: Decoder): AsyncIterableIterator<string,void,void> {
+export async function* consumeTextString(decoder: DecoderLike): AsyncIterableIterator<string,void,void> {
     let counter = 1;
 
-    for await (const value of decoder.events()) {
+    for await (const value of decoder[DecoderSymbol].events()) {
         if (value.majorType != MajorType.TextString) {
             throw new Error(`Unexpected major type ${value.majorType} while reading text string event: ${value}`);
         }

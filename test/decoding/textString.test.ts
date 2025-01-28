@@ -13,9 +13,9 @@ Deno.test(async function decodeUnicodeCodepointInMultipleChunksTest() {
     const expectedText = "körte";
     const stream: ReadableStream<Uint8Array> = iterableToStream(chunks);
     const decoder = decoderFromStream(stream);
-    const next = await assertNext(decoder.events())
-    assertEquals(next.eventType, "start", "Expect start event");
-    const parts = await collect(consumeTextString(decoder));
+    const event = await assertNext(decoder.events())
+    assertEquals(event.eventType, "start", "Expect start event");
+    const parts = await collect(consumeTextString(event));
     const resultText = parts.join("");
     assertEquals(resultText,expectedText,"Expect correct text");
 });

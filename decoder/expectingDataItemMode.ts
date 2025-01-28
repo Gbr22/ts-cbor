@@ -1,6 +1,6 @@
 import { AdditionalInfo, MajorType } from "../common.ts";
 import { IterationControl } from "../iteration-control.ts";
-import { Mode, ReaderState, SubMode } from "./common.ts";
+import { DecoderSymbol, Mode, ReaderState, SubMode } from "./common.ts";
 import { EndEvent, StartEvent } from "./events.ts";
 import { flushHeaderAndArgument } from "./header.ts";
 import { yieldEndOfDataItem } from "./iterating.ts";
@@ -53,6 +53,7 @@ export async function handleExpectingDataItemMode(state: ReaderState) {
                 eventType: "start",
                 length: undefined,
                 majorType: MajorType.ByteString,
+                [DecoderSymbol]: state.decoder!,
             });
         }
         if (state.majorType == MajorType.TextString) {
@@ -62,6 +63,7 @@ export async function handleExpectingDataItemMode(state: ReaderState) {
                 eventType: "start",
                 length: undefined,
                 majorType: MajorType.TextString,
+                [DecoderSymbol]: state.decoder!,
             });
         }
         if (state.majorType == MajorType.SimpleValue) {
@@ -69,13 +71,15 @@ export async function handleExpectingDataItemMode(state: ReaderState) {
             if (state.subMode == SubMode.ReadingIndefiniteByteString) {
                 yieldEndOfDataItem<EndEvent>(state,{
                     eventType: "end",
-                    majorType: MajorType.ByteString
+                    majorType: MajorType.ByteString,
+                    [DecoderSymbol]: state.decoder!,
                 });
             }
             if (state.subMode == SubMode.ReadingIndefiniteTextString) {
                 yieldEndOfDataItem<EndEvent>(state,{
                     eventType: "end",
-                    majorType: MajorType.TextString
+                    majorType: MajorType.TextString,
+                    [DecoderSymbol]: state.decoder!,
                 });
             }
             throw new Error(`Unexpected stop code`);

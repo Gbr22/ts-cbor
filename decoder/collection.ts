@@ -1,4 +1,4 @@
-import { ReaderState } from "./common.ts";
+import { DecoderSymbol, ReaderState } from "./common.ts";
 import { EndEvent } from "./events.ts";
 
 export function checkCollectionEnd(state: ReaderState) {
@@ -20,6 +20,7 @@ export function checkCollectionEnd(state: ReaderState) {
             {
                 eventType: "end",
                 majorType: type as EndEvent["majorType"],
+                [DecoderSymbol]: state.decoder!,
             }
         );
     }
