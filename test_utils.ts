@@ -1,7 +1,8 @@
+// deno-lint-ignore-file
 import { assertEquals } from "@std/assert/equals";
-import { AsyncWriter, intoAsyncWriter, decoderFromStream, parseDecoder, WritableValue, writeValue, WriterReturnType } from "./main.ts";
+import { AsyncWriter, intoAsyncWriter, decoderFromStream, parseDecoder, WritableValue, writeValue } from "./main.ts";
 import { iterableToStream, concatBytes, DropFirst } from "./utils.ts";
-import { intoSyncWriter, SyncWriter } from "./encoder.ts";
+import { intoSyncWriter } from "./encoder.ts";
 
 export function stripWhitespace(s: string) {
     return s.replaceAll(/\s/g,"");
@@ -130,8 +131,9 @@ export function byteWritableStream() {
             return concatBytes(...bytes);
         },
         stream: new WritableStream({
-            async write(value: Uint8Array) {
+            write(value: Uint8Array) {
                 bytes.push(value);
+                return Promise.resolve();
             },
             async close() {
             }

@@ -1,10 +1,10 @@
 import { MajorType } from "../common.ts";
 import { IterationControl } from "../iteration-control.ts";
-import { Decoder, DecoderLike, DecoderSymbol, Mode, ReaderState } from "./common.ts";
+import { DecoderLike, DecoderSymbol, Mode, ReaderState } from "./common.ts";
 import { DataEvent, EndEvent } from "./events.ts";
 import { yieldEndOfDataItem } from "./iterating.ts";
 
-export async function handleByteStringData(state: ReaderState) {
+export function handleByteStringData(state: ReaderState) {
     if (state.byteArrayNumberOfBytesToRead <= 0) {
         state.mode = Mode.ExpectingDataItem;
         yieldEndOfDataItem<EndEvent>(state,{

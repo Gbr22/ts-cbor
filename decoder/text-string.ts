@@ -1,6 +1,6 @@
 import { MajorType } from "../common.ts";
 import { IterationControl } from "../iteration-control.ts";
-import { Decoder, DecoderLike, DecoderSymbol, Mode, ReaderState } from "./common.ts";
+import { DecoderLike, DecoderSymbol, Mode, ReaderState } from "./common.ts";
 import { DataEvent, EndEvent } from "./events.ts";
 import { yieldEndOfDataItem } from "./iterating.ts";
 
@@ -15,7 +15,7 @@ const utf8LengthMapping = [
     [0b1111_1111, 0b1111_1111, 8     ],
 ];
 
-export async function handleTextStringData(state: ReaderState) {
+export function handleTextStringData(state: ReaderState) {
     if (state.byteArrayNumberOfBytesToRead <= 0) {
         state.mode = Mode.ExpectingDataItem;
         if (state.unsafeTextSlice.length > 0) {

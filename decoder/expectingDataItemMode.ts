@@ -7,7 +7,7 @@ import { yieldEndOfDataItem } from "./iterating.ts";
 import { serialize } from "../common.ts";
 
 const reservedAddionalInfo = Object.freeze([28,29,30]);
-export async function handleExpectingDataItemMode(state: ReaderState) {
+export function handleExpectingDataItemMode(state: ReaderState) {
     if (state.isReaderDone) {
         IterationControl.return();
     }

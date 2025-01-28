@@ -41,7 +41,7 @@ export function serialize(unknown: unknown) {
 	}
 	try {
 		return JSON.stringify(unknown);
-	} catch (err) {
+	} catch (_err) {
 		return `'${unknown}'`;
 	}
 }

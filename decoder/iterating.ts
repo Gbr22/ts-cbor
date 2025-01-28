@@ -7,17 +7,17 @@ import { handleExpectingDataItemMode } from "./expectingDataItemMode.ts";
 import { handleReadingArgumentMode } from "./readingArgumentMode.ts";
 import { handleReadingDataMode } from "./readingDataMode.ts";
 
-async function handleDecoderIterationData(state: ReaderState) {
+function handleDecoderIterationData(state: ReaderState) {
 	if (state.mode == Mode.ReadingData) {
-		await handleReadingDataMode(state);
+		handleReadingDataMode(state);
 		return;
 	}
 	if (state.mode == Mode.ExpectingDataItem) {
-		await handleExpectingDataItemMode(state);
+		handleExpectingDataItemMode(state);
 		return;
 	}
 	if (state.mode == Mode.ReadingArgument) {
-		await handleReadingArgumentMode(state);
+		handleReadingArgumentMode(state);
 		return;
 	}
 	throw new Error(`Unexpected mode ${state.mode} in ReaderState`);
@@ -31,9 +31,9 @@ function flushYieldQueue(state: ReaderState) {
 }
 
 async function handleDecoderIteration(state: ReaderState) {
-	await flushYieldQueue(state);
+	flushYieldQueue(state);
 	await refreshBuffer(state);
-	await handleDecoderIterationData(state);
+	handleDecoderIterationData(state);
 }
 
 export function yieldEndOfDataItem<Event extends DecoderEvent>(state: ReaderState, event: Event): never {
