@@ -82,7 +82,27 @@ export async function handleExpectingDataItemMode(state: ReaderState) {
                     [DecoderSymbol]: state.decoder!,
                 });
             }
+            if (state.itemsToRead.length > 0 && state.itemsToRead[state.itemsToRead.length - 1] === Infinity) {
+                state.itemsToRead.pop();
+                const type = state.hierarchy.pop()!;
+                yieldEndOfDataItem<EndEvent>(state,{
+                    eventType: "end",
+                    majorType: type as EndEvent["majorType"],
+                    [DecoderSymbol]: state.decoder!,
+                });
+            }
             throw new Error(`Unexpected stop code`);
+        }
+        if (state.majorType == MajorType.Array || state.majorType == MajorType.Map) {
+            state.mode = Mode.ExpectingDataItem;
+            state.hierarchy.push(state.majorType);
+            state.itemsToRead.push(Infinity);
+            IterationControl.yield<StartEvent>({
+                eventType: "start",
+                length: undefined,
+                majorType: state.majorType,
+                [DecoderSymbol]: state.decoder!,
+            });
         }
         throw new Error(`Major Type ${state.majorType} cannot be isIndefinite`);
     }

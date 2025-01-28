@@ -2,7 +2,7 @@ import { writeByteStream } from "../../main.ts";
 import { hex, writeThenAssertBytesEquals } from "../../test_utils.ts";
 import { iterableToStream } from "../../utils.ts";
 
-Deno.test(async function encodeByteStringFromStreamTest() {
+Deno.test(async function encodeByteStringStreamTest() {
     const chunks = [
         new Uint8Array([1,2,3]),
         new Uint8Array([4,5,6]),
