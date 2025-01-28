@@ -32,38 +32,3 @@ export function iterableToStream<T>(it: Iterable<T>) {
         }
     });
 }
-
-export function bytesToStream(bytes: Uint8Array, bufferSize: number = 5) {
-    const count = bytes.length / bufferSize;
-    const it = function*() {
-        for (let i = 0; i < count; i++) {
-            yield bytes.slice(i * bufferSize, (i + 1) * bufferSize);
-        }
-    }();
-    return iterableToStream(it);
-}
-
-export function stringToBytes(str: string) {
-    const bytes = new Uint8Array(str.length);
-    bytes.set(str.split("").map(c => c.charCodeAt(0)));
-    return bytes;
-}
-
-export function byteStringToStream(str: string, bufferSize: number = 5) {
-    return bytesToStream(stringToBytes(str), bufferSize);
-}
-export function byteWritableStream() {
-    const bytes: Uint8Array[] = [];
-    return {
-        getBytes() {
-            return joinBytes(...bytes);
-        },
-        stream: new WritableStream({
-            async write(value: Uint8Array) {
-                bytes.push(value);
-            },
-            async close() {
-            }
-        })
-    }
-}

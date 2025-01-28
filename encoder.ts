@@ -31,6 +31,28 @@ export async function writeSimpleValue(writer: Writer, value: number) {
 export async function writeBreak(writer: Writer) {
     await writeHeader(writer, MajorType.SimpleValue, AdditionalInfo.IndefiniteLength);
 }
+export async function writeArgument8(writer: Writer, majorType: number, number: number | bigint) {
+    await writeHeader(writer, majorType, AdditionalInfo.Length1);
+    await writer.write(new Uint8Array([Number(number)]));
+}
+export async function writeArgument16(writer: Writer, majorType: number, number: number | bigint) {
+    await writeHeader(writer, majorType, AdditionalInfo.Length2);
+    const buffer = new Uint8Array(2);
+    new DataView(buffer.buffer).setUint16(0, Number(number));
+    await writer.write(buffer);
+}
+export async function writeArgument32(writer: Writer, majorType: number, number: number | bigint) {
+    await writeHeader(writer, majorType, AdditionalInfo.Length4);
+    const buffer = new Uint8Array(4);
+    new DataView(buffer.buffer).setUint32(0, Number(number));
+    await writer.write(buffer);
+}
+export async function writeArgument64(writer: Writer, majorType: number, number: number | bigint) {
+    await writeHeader(writer, majorType, AdditionalInfo.Length8);
+    const buffer = new Uint8Array(8);
+    new DataView(buffer.buffer).setBigUint64(0, BigInt(number));
+    await writer.write(buffer);
+}
 export async function writeArgument(writer: Writer, majorType: number, number: number | bigint) {
     if (number < 0) {
         throw new Error("Number must be positive");
@@ -40,34 +62,44 @@ export async function writeArgument(writer: Writer, majorType: number, number: n
         return;
     }
     if (number <= 0xFF) {
-        await writeHeader(writer, majorType, AdditionalInfo.Length1);
-        await writer.write(new Uint8Array([Number(number)]));
+        await writeArgument8(writer, majorType, number);
         return;
     }
     if (number <= 0xFFFF) {
-        await writeHeader(writer, majorType, AdditionalInfo.Length2);
-        const buffer = new Uint8Array(2);
-        new DataView(buffer.buffer).setUint16(0, Number(number));
-        await writer.write(buffer);
+        await writeArgument16(writer, majorType, number);
         return;
     }
     if (number <= 0xFFFF_FFFF) {
-        await writeHeader(writer, majorType, AdditionalInfo.Length4);
-        const buffer = new Uint8Array(4);
-        new DataView(buffer.buffer).setUint32(0, Number(number));
-        await writer.write(buffer);
+        await writeArgument32(writer, majorType, number);
         return;
     }
     if (number <= 0xFFFF_FFFF_FFFF_FFFFn) {
-        await writeHeader(writer, majorType, AdditionalInfo.Length8);
-        const buffer = new Uint8Array(8);
-        new DataView(buffer.buffer).setBigUint64(0, BigInt(number));
-        await writer.write(buffer);
+        await writeArgument64(writer, majorType, number);
         return;
     }
     throw new Error(`Number too large: ${number}`);
 }
 
+export async function writeIntTiny(writer: Writer, number: number | bigint) {
+    const { type, value } = getNumberWrittenValueAndType(number);
+    await writeHeader(writer, type, Number(value));
+}
+export async function writeInt8(writer: Writer, number: number | bigint) {
+    const { type, value } = getNumberWrittenValueAndType(number);
+    await writeArgument8(writer, type, value);
+}
+export async function writeInt16(writer: Writer, number: number | bigint) {
+    const { type, value } = getNumberWrittenValueAndType(number);
+    await writeArgument16(writer, type, value);
+}
+export async function writeInt32(writer: Writer, number: number | bigint) {
+    const { type, value } = getNumberWrittenValueAndType(number);
+    await writeArgument32(writer, type, value);
+}
+export async function writeInt64(writer: Writer, number: number | bigint) {
+    const { type, value } = getNumberWrittenValueAndType(number);
+    await writeArgument64(writer, type, value);
+}
 export async function writeByteString(writer: Writer, value: Uint8Array) {
     await writeArgument(writer, MajorType.ByteString, value.byteLength);
     await writer.write(value);
@@ -95,18 +127,23 @@ export async function writeTextStream(writer: Writer, stream: ReadableStream<str
     await writeBreak(writer);
 }
 
-export async function writeNumber(writer: Writer, value: number | bigint) {
-    let newValue = value;
-    if (newValue < 0) {
-        if (typeof newValue === "bigint") {
-            newValue = (newValue * -1n) - 1n;
+function getNumberWrittenValueAndType(number: number | bigint) {
+    let value = number;
+    if (value < 0) {
+        if (typeof value === "bigint") {
+            value = (value * -1n) - 1n;
         }
-        else if (typeof newValue === "number") {
-            newValue = (newValue * -1) - 1;
+        else if (typeof value === "number") {
+            value = (value * -1) - 1;
         }
     }
-    const type = value < 0 ? MajorType.NegativeInteger : MajorType.UnsignedInteger;
-    await writeArgument(writer, type, newValue);
+    const type = number < 0 ? MajorType.NegativeInteger : MajorType.UnsignedInteger;
+    return { type, value };
+}
+
+export async function writeInt(writer: Writer, number: number | bigint) {
+    const { type, value } = getNumberWrittenValueAndType(number);
+    await writeArgument(writer, type, value);
 }
 
 async function writeFloatN<ArrayConstructor extends typeof Float16Array | typeof Float32Array | typeof Float64Array>(writer: Writer, value: number | InstanceType<ArrayConstructor>, ArrayConstructor: ArrayConstructor, simpleValue: number) {
@@ -158,7 +195,7 @@ export type ReadableValue = PrimitiveReadableValue | Map<ReadableValue,ReadableV
 
 export async function writeValue(writer: Writer, value: PrimitiveWritableValue | WritableValue) {
     if (typeof value === "number" && Number.isInteger(value)) {
-        await writeNumber(writer, value);
+        await writeInt(writer, value);
         return;
     }
     if (typeof value === "number") {
@@ -166,7 +203,7 @@ export async function writeValue(writer: Writer, value: PrimitiveWritableValue |
         return;
     }
     if (typeof value === "bigint") {
-        await writeNumber(writer, value);
+        await writeInt(writer, value);
         return;
     }
     if (value instanceof Uint8Array) {

@@ -6,6 +6,7 @@ export {
 export {
 	decodeUint,
 	decodeFloat,
+	decodeNumberEvent,
 } from "./decoder/numbers.ts";
 export {
 	writeByteStream,
@@ -17,11 +18,20 @@ export {
 	writeTrue,
 	writeNull,
 	writeUndefined,
-	writeNumber,
+	writeInt,
+	writeIntTiny,
+	writeFloat16,
+	writeFloat32,
+	writeFloat64,
 	writeArgument,
+	writeArgument8,
+	writeArgument16,
+	writeArgument32,
+	writeArgument64,
 	writeHeader,
 	writeBreak,
 	writeArrayHeader,
+	writeSimpleValue,
 	type WritableValue,
 	type ReadableValue,
 } from "./encoder.ts";
@@ -49,6 +59,7 @@ export {
 	type EndEvent,
 	type DataEvent,
 	type NumberEvent,
+	type FloatLiteralEvent,
 } from "./decoder/events.ts";
 export {
 	MajorType,
