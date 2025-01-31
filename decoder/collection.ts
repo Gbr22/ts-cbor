@@ -1,5 +1,5 @@
-import { DecoderSymbol, ReaderState } from "./common.ts";
-import { EndEvent } from "./events.ts";
+import { ReaderState } from "./common.ts";
+import { EndEventData } from "./events.ts";
 
 export function checkCollectionEnd(state: ReaderState) {
     if (state.itemsToRead.length <= 0) {
@@ -16,12 +16,9 @@ export function checkCollectionEnd(state: ReaderState) {
         }
         const type = state.hierarchy.pop();
         state.itemsToRead.pop();
-        state.yieldQueue.push(
-            {
-                eventType: "end",
-                majorType: type as EndEvent["majorType"],
-                [DecoderSymbol]: state.decoder!,
-            }
-        );
+        state.enqueueEventData({
+            eventType: "end",
+            majorType: type as EndEventData["majorType"],
+        });
     }
 }

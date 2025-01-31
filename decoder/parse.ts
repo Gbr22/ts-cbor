@@ -2,15 +2,16 @@ import { MajorType } from "../common.ts";
 import { ReadableValue } from "../encoder.ts";
 import { collect, collectBytes } from "../utils.ts";
 import { consumeByteString } from "./byte-string.ts";
-import { Decoder } from "./common.ts";
+import { AsyncDecoder } from "./common.ts";
 import { decodeNumberEvent, isNumberEvent } from "./numbers.ts";
 import { decodeSimpleValue, isSimpleValueEvent } from "./simple-value.ts";
 import { consumeTextString } from "./text-string.ts";
 import { serialize } from "../common.ts";
+import { SyncDecoder } from "../main.ts";
 
-export async function* transformDecoder(decoder: Decoder): AsyncIterableIterator<ReadableValue> {
+export async function* transformDecoder(decoder: AsyncDecoder): AsyncIterableIterator<ReadableValue> {
     for await (const event of decoder.events()) {
-        if (event.eventType === "end") {
+        if (event.eventData.eventType === "end") {
             return;
         }
         if (isNumberEvent(event)) {
@@ -18,10 +19,10 @@ export async function* transformDecoder(decoder: Decoder): AsyncIterableIterator
             continue;
         }
         if (isSimpleValueEvent(event)) {
-            yield decodeSimpleValue(event.data);
+            yield decodeSimpleValue(event.eventData.data);
             continue;
         }
-        if (event.eventType === "start" && event.majorType === MajorType.Array) {
+        if (event.eventData.eventType === "start" && event.eventData.majorType === MajorType.Array) {
             const values = [];
             for await (const item of transformDecoder(decoder)) {
                 values.push(item);
@@ -29,7 +30,7 @@ export async function* transformDecoder(decoder: Decoder): AsyncIterableIterator
             yield values;
             continue;
         }
-        if (event.eventType === "start" && event.majorType === MajorType.Map) {
+        if (event.eventData.eventType === "start" && event.eventData.majorType === MajorType.Map) {
             const values = new Map();
             let key: unknown;
             let hasKey = false;
@@ -45,13 +46,13 @@ export async function* transformDecoder(decoder: Decoder): AsyncIterableIterator
             yield values;
             continue;
         }
-        if (event.eventType === "start" && event.majorType === MajorType.ByteString) {
+        if (event.eventData.eventType === "start" && event.eventData.majorType === MajorType.ByteString) {
             const it = await consumeByteString(decoder);
             const bytes = await collectBytes(it);
             yield bytes;
             continue;
         }
-        if (event.eventType === "start" && event.majorType === MajorType.TextString) {
+        if (event.eventData.eventType === "start" && event.eventData.majorType === MajorType.TextString) {
             const it = await consumeTextString(decoder);
             const parts = await collect(it);
             const text = parts.join("");
@@ -61,7 +62,7 @@ export async function* transformDecoder(decoder: Decoder): AsyncIterableIterator
     }
 }
 
-export async function parseDecoder<T>(decoder: Decoder): Promise<T> {
+export async function parseDecoder<T>(decoder: AsyncDecoder): Promise<T> {
     let hasValue = false;
     let value: unknown;
     for await (const item of transformDecoder(decoder)) {
@@ -76,3 +77,13 @@ export async function parseDecoder<T>(decoder: Decoder): Promise<T> {
     }
     throw new Error("Expected item");
 }
+
+export type MapDecoderToIterator<D,A,B,C> = (
+    D extends AsyncDecoder ?
+        AsyncIterableIterator<A,B,C>
+        :
+        D extends SyncDecoder ?
+            IterableIterator<A,B,C>
+            :
+            never
+);

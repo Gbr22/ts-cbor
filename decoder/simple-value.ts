@@ -1,4 +1,4 @@
-import { DecoderEvent, MajorType, SimpleValueLiteralEvent } from "../main.ts";
+import { DecoderEvent, DecoderLike, MajorType, SimpleValueLiteralEventData } from "../main.ts";
 
 export const UnknownSimpleValue = Symbol("UnknownSimpleValue");
 export type UnknownSimpleValue = typeof UnknownSimpleValue;
@@ -19,6 +19,6 @@ export function decodeSimpleValue(numberValue: number): boolean | null | undefin
     return UnknownSimpleValue;
 }
 
-export function isSimpleValueEvent(event: DecoderEvent): event is SimpleValueLiteralEvent {
-    return event.eventType === "literal" && event.majorType === MajorType.SimpleValue && event.simpleValueType === "simple";
+export function isSimpleValueEvent<Event extends DecoderEvent>(event: Event): event is Event & DecoderEvent<DecoderLike, SimpleValueLiteralEventData> {
+    return event.eventData.eventType === "literal" && event.eventData.majorType === MajorType.SimpleValue && event.eventData.simpleValueType === "simple";
 }

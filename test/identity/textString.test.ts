@@ -21,7 +21,7 @@ Deno.test(async function textStringStreamIdentityTest() {
     const writeResult = await getBytes();
     const decoder = decoderFromStream(bytesToStream(writeResult));
     const event = await assertNext(decoder.events())
-    assertEquals(event.eventType, "start", "Expect start event");
+    assertEquals(event.eventData.eventType, "start", "Expect start event");
     const readResult = (await collect(consumeTextString(event))).join("");
 
     assertEquals(readResult, chunks.join(""), "Expect correct bytes");

@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert/equals";
-import { decodeFloat, decoderFromStream, FloatLiteralEvent, MajorType, writeFloat16, writeFloat32, writeFloat64, decodeNumberEvent, AsyncWriter } from "../../main.ts";
+import { decodeFloat, decoderFromStream, FloatLiteralEventData, MajorType, writeFloat16, writeFloat32, writeFloat64, decodeNumberEvent, AsyncWriter, DecoderLike, DecoderEvent } from "../../main.ts";
 import { assertNext, assertWriteReadIdentity, bytesToStream, byteWritableStream } from "../../test_utils.ts";
 import { assertAlmostEquals } from "@std/assert/almost-equals";
 import { intoAsyncWriter } from "../../encoder.ts";
@@ -12,10 +12,10 @@ async function floatTest(writeFloat: (writer: AsyncWriter, value: number)=>Promi
     const writeResult = await getBytes();
     const decoder = decoderFromStream(bytesToStream(writeResult));
     const next = await assertNext(decoder.events())
-    assertEquals(next.eventType, "literal", "Expect literal event");
-    assertEquals(next.majorType, MajorType.SimpleValue, "Expect SimpleValue major type");
-    assertEquals((next as FloatLiteralEvent).simpleValueType, "float", "Expect simple value type");
-    assertAlmostEquals(decodeFloat((next as FloatLiteralEvent).data), value, tolerance, "Expect correct value (data)");
+    assertEquals(next.eventData.eventType, "literal", "Expect literal event");
+    assertEquals(next.eventData.majorType, MajorType.SimpleValue, "Expect SimpleValue major type");
+    assertEquals((next as DecoderEvent<DecoderLike, FloatLiteralEventData>).eventData.simpleValueType, "float", "Expect simple value type");
+    assertAlmostEquals(decodeFloat((next as DecoderEvent<DecoderLike, FloatLiteralEventData>).eventData.data), value, tolerance, "Expect correct value (data)");
     assertAlmostEquals(decodeNumberEvent(next) as number, value, tolerance, "Expect correct value (event)");
 }
 

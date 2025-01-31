@@ -1,55 +1,67 @@
 import { MajorType } from "../common.ts";
-import { Decoder, DecoderSymbol } from "./common.ts";
+import { DecoderLike } from "../main.ts";
+import { SyncDecoderLike } from "./common.ts";
+import { SyncDecoderSymbol } from "./common.ts";
+import { AsyncDecoderLike } from "./common.ts";
+import { AsyncDecoderSymbol } from "./common.ts";
 
-export type LiteralEvent = IntegerLiteralEvent | SimpleValueLiteralEvent | FloatLiteralEvent | TagLiteralEvent;
-export type TagLiteralEvent = {
+export type LiteralEventData = IntegerLiteralEventData | SimpleValueLiteralEventData | FloatLiteralEventData | TagLiteralEventData;
+export type TagLiteralEventData = {
     eventType: "literal",
     majorType: typeof MajorType["Tag"],
     data: Uint8Array,
-    [DecoderSymbol]: Decoder,
 };
-export type SimpleValueLiteralEvent = {
+export type SimpleValueLiteralEventData = {
     eventType: "literal"
     majorType: typeof MajorType["SimpleValue"]
     simpleValueType: "simple"
     data: number,
-    [DecoderSymbol]: Decoder,
 };
-export type FloatLiteralEvent = {
+export type FloatLiteralEventData = {
     eventType: "literal"
     majorType: typeof MajorType["SimpleValue"]
     simpleValueType: "float"
     data: Uint8Array,
-    [DecoderSymbol]: Decoder,
-}
-export type IntegerLiteralEvent = {
+};
+export type IntegerLiteralEventData = {
     eventType: "literal",
     majorType: typeof MajorType["NegativeInteger"] | typeof MajorType["UnsignedInteger"] | typeof MajorType["Tag"],
     data: Uint8Array,
-    [DecoderSymbol]: Decoder,
 };
-export type StartEvent = {
+export type StartEventData = {
     eventType: "start",
     length: number | bigint | undefined,
     majorType: typeof MajorType["ByteString"] | typeof MajorType["TextString"] | typeof MajorType["Array"] | typeof MajorType["Map"],
-    [DecoderSymbol]: Decoder,
 };
-export type EndEvent = {
+export type EndEventData = {
     eventType: "end",
     majorType: typeof MajorType["ByteString"] | typeof MajorType["TextString"] | typeof MajorType["Array"] | typeof MajorType["Map"],
-    [DecoderSymbol]: Decoder,
 };
-export type DataEvent = {
+export type DataEventData = {
     eventType: "data",
     majorType: typeof MajorType["ByteString"],
     data: Uint8Array,
-    [DecoderSymbol]: Decoder,
 } | {
     eventType: "data",
     majorType: typeof MajorType["TextString"],
     data: string,
-    [DecoderSymbol]: Decoder,
 };
 
-export type DecoderEvent = LiteralEvent | StartEvent | EndEvent | DataEvent;
-export type NumberEvent = IntegerLiteralEvent | FloatLiteralEvent;
+export type NumberEventData = IntegerLiteralEventData | FloatLiteralEventData;
+export type DecoderEventData = LiteralEventData | StartEventData | EndEventData | DataEventData;
+export type DecoderEvent<DecoderLikeType extends DecoderLike = DecoderLike, EventData extends DecoderEventData = DecoderEventData> = {
+    eventData: EventData,
+} & DecoderLikeType;
+
+export function wrapEventData<EventData extends DecoderEventData, Decoder extends DecoderLike = DecoderLike>(decoder: Decoder, eventData: EventData): DecoderEvent<Decoder, EventData> {
+    const obj = {
+        eventData,
+    } as DecoderEvent<Decoder, EventData>;
+    if (AsyncDecoderSymbol in decoder && decoder[AsyncDecoderSymbol]) {
+        (obj as AsyncDecoderLike)[AsyncDecoderSymbol] = decoder[AsyncDecoderSymbol];
+    }
+    if (SyncDecoderSymbol in decoder && decoder[SyncDecoderSymbol]) {
+        (obj as SyncDecoderLike)[SyncDecoderSymbol] = decoder[SyncDecoderSymbol];
+    }
+    return obj;
+}

@@ -1,19 +1,34 @@
-import { DecoderEvent } from "./events.ts";
+import { IterationControl } from "../iteration-control.ts";
+import { DecoderEvent, DecoderEventData, wrapEventData } from "./events.ts";
+import { yieldEndOfDataItem } from "./iterating.ts";
 
-export type DecoderEvents = AsyncIterableIterator<DecoderEvent>;
+export type DecoderEventsAsync = AsyncIterableIterator<DecoderEvent>;
+export type DecoderEventsSync = IterableIterator<DecoderEvent>;
 
-export const DecoderSymbol = Symbol("Decoder");
-export type DecoderSymbol = typeof DecoderSymbol;
+export const AsyncDecoderSymbol = Symbol("AsyncDecoder");
+export type AsyncDecoderSymbol = typeof AsyncDecoderSymbol;
 
-export type DecoderLike = {
-    [DecoderSymbol]: Decoder;
+export const SyncDecoderSymbol = Symbol("SyncDecoder");
+export type SyncDecoderSymbol = typeof SyncDecoderSymbol;
+
+export type AsyncDecoderLike = {
+    [AsyncDecoderSymbol]: AsyncDecoder;
 };
+export type SyncDecoderLike = {
+    [SyncDecoderSymbol]: SyncDecoder;
+};
+export type DecoderLike = AsyncDecoderLike | SyncDecoderLike;
 
-export interface Decoder {
-    events(): DecoderEvents;
-    [DecoderSymbol]: Decoder;
+export interface AsyncDecoder {
+    events(): DecoderEventsAsync;
+    [AsyncDecoderSymbol]: AsyncDecoder;
 }
 
+export interface SyncDecoder {
+    events(): DecoderEventsSync;
+    [SyncDecoderSymbol]: SyncDecoder;
+}
+export type Decoder = AsyncDecoder | SyncDecoder;
 export const Mode = Object.freeze({
     ExpectingDataItem: 0,
     ReadingArgument: 1,
@@ -27,7 +42,7 @@ export const SubMode = Object.freeze({
 });
 
 export type ReaderState = {
-	decoder: Decoder | undefined,
+	decoder: AsyncDecoder | SyncDecoder | undefined,
     reader: ReadableStreamDefaultReader<Uint8Array>
 	isReaderDone: boolean,
 	currentBuffer: Uint8Array
@@ -45,6 +60,9 @@ export type ReaderState = {
     itemsToRead: (number | bigint)[]
     hierarchy: number[]
     yieldQueue: DecoderEvent[]
+    yieldEventData: (data: DecoderEventData)=>never
+    enqueueEventData: (data: DecoderEventData)=>void
+    yieldEndOfDataItem: (data: DecoderEventData)=>never
 };
 
 export function createReaderState(reader: ReadableStreamDefaultReader<Uint8Array>): ReaderState {
@@ -67,5 +85,14 @@ export function createReaderState(reader: ReadableStreamDefaultReader<Uint8Array
         itemsToRead: [],
         hierarchy: [],
         yieldQueue: [],
+        yieldEventData(data: DecoderEventData) {
+            return IterationControl.yield(wrapEventData(this.decoder!, data));
+        },
+        enqueueEventData(data: DecoderEventData) {
+            this.yieldQueue.push(wrapEventData(this.decoder!, data));
+        },
+        yieldEndOfDataItem(data: DecoderEventData) {
+            return yieldEndOfDataItem(this, wrapEventData(this.decoder!,data));
+        }
     }
 }

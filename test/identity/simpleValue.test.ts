@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert/equals";
-import { decoderFromStream, MajorType, SimpleValueLiteralEvent, writeSimpleValue } from "../../main.ts";
+import { DecoderEvent, decoderFromStream, DecoderLike, MajorType, SimpleValueLiteralEventData, writeSimpleValue } from "../../main.ts";
 import { assertNext, assertWriteReadIdentity, bytesToStream, byteWritableStream } from "../../test_utils.ts";
 import { intoAsyncWriter } from "../../encoder.ts";
 
@@ -24,9 +24,9 @@ Deno.test(async function simpleValueNumericIdentityTest() {
         const writeResult = await getBytes();
         const decoder = decoderFromStream(bytesToStream(writeResult));
         const next = await assertNext(decoder.events())
-        assertEquals(next.eventType, "literal", "Expect literal event");
-        assertEquals(next.majorType, MajorType.SimpleValue, "Expect SimpleValue major type");
-        assertEquals((next as SimpleValueLiteralEvent).simpleValueType, "simple", "Expect simple value type");
-        assertEquals((next as SimpleValueLiteralEvent).data, simpleValue, "Expect correct value");
+        assertEquals(next.eventData.eventType, "literal", "Expect literal event");
+        assertEquals(next.eventData.majorType, MajorType.SimpleValue, "Expect SimpleValue major type");
+        assertEquals((next as DecoderEvent<DecoderLike, SimpleValueLiteralEventData>).eventData.simpleValueType, "simple", "Expect simple value type");
+        assertEquals((next as DecoderEvent<DecoderLike, SimpleValueLiteralEventData>).eventData.data, simpleValue, "Expect correct value");
     }
 });

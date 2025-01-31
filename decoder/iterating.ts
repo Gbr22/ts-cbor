@@ -1,7 +1,7 @@
-import { IterationControl } from "../iteration-control.ts";
+import { IterationControl, IterationState } from "../iteration-control.ts";
 import { refreshBuffer } from "./buffer.ts";
 import { checkCollectionEnd } from "./collection.ts";
-import { createReaderState, Decoder, DecoderSymbol, Mode, ReaderState } from "./common.ts";
+import { createReaderState, AsyncDecoder, AsyncDecoderSymbol, Mode, ReaderState } from "./common.ts";
 import { DecoderEvent } from "./events.ts";
 import { handleExpectingDataItemMode } from "./expectingDataItemMode.ts";
 import { handleReadingArgumentMode } from "./readingArgumentMode.ts";
@@ -30,10 +30,19 @@ function flushYieldQueue(state: ReaderState) {
 	}
 }
 
-async function handleDecoderIteration(state: ReaderState) {
-	flushYieldQueue(state);
-	await refreshBuffer(state);
-	handleDecoderIterationData(state);
+export type IteratorPullResult<T> = {
+	done: false,
+	value: T,
+} | {
+	done: true,
+	value?: T,
+};
+export type DecoderIterationState = IterationState<DecoderEvent, IteratorPullResult<Uint8Array>, never[]>;
+
+function handleDecoderIteration(readerState: ReaderState, iterationState: DecoderIterationState) {
+	flushYieldQueue(readerState);
+	refreshBuffer(iterationState, readerState);
+	handleDecoderIterationData(readerState);
 }
 
 export function yieldEndOfDataItem<Event extends DecoderEvent>(state: ReaderState, event: Event): never {
@@ -41,20 +50,23 @@ export function yieldEndOfDataItem<Event extends DecoderEvent>(state: ReaderStat
 	IterationControl.yield<DecoderEvent>(event);
 }
 
-export function decoderFromStream(stream: ReadableStream<Uint8Array>): Decoder {
+export function decoderFromStream(stream: ReadableStream<Uint8Array>): AsyncDecoder {
 	const reader = stream.getReader();
-	const state = createReaderState(reader);
+	const readerState = createReaderState(reader);
+
+	async function pull() {
+		const result = await reader.read();
+		return result;
+	}
 
 	function events() {
-		return IterationControl.createIterator<DecoderEvent>(async () => {
-			await handleDecoderIteration(state);
-		})[Symbol.asyncIterator]();
+		return IterationControl.createAsyncIterator<DecoderEvent,ReadableStreamReadResult<Uint8Array>, never[]>(handleDecoderIteration.bind(null,readerState),pull)[Symbol.asyncIterator]();
 	}
-	const decoder: Decoder = {
+	const decoder: AsyncDecoder = {
 		events,
-		[DecoderSymbol]: undefined as unknown as Decoder,
+		[AsyncDecoderSymbol]: undefined as unknown as AsyncDecoder,
 	}
-	decoder[DecoderSymbol] = decoder;
-	state.decoder = decoder;
+	decoder[AsyncDecoderSymbol] = decoder;
+	readerState.decoder = decoder;
 	return decoder;
 }

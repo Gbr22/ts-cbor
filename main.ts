@@ -52,23 +52,30 @@ export {
 	consumeTextString,
 } from "./decoder/text-string.ts";
 export {
-	decoderFromStream
+	decoderFromStream,
+	type IteratorPullResult,
 } from "./decoder/iterating.ts";
 export {
+	type AsyncDecoder,
+	type SyncDecoder,
 	type Decoder,
-	DecoderSymbol,
+	AsyncDecoderSymbol,
+	SyncDecoderSymbol,
+	type AsyncDecoderLike,
+	type SyncDecoderLike,
 	type DecoderLike,
 } from "./decoder/common.ts";
 export {
+	type DecoderEventData,
+	type LiteralEventData,
+	type IntegerLiteralEventData,
+	type SimpleValueLiteralEventData,
+	type StartEventData,
+	type EndEventData,
+	type DataEventData,
+	type NumberEventData,
+	type FloatLiteralEventData,
 	type DecoderEvent,
-	type LiteralEvent,
-	type IntegerLiteralEvent,
-	type SimpleValueLiteralEvent,
-	type StartEvent,
-	type EndEvent,
-	type DataEvent,
-	type NumberEvent,
-	type FloatLiteralEvent,
 } from "./decoder/events.ts";
 export {
 	MajorType,

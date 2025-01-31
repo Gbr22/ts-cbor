@@ -1,8 +1,10 @@
-import { MajorType } from "../common.ts";
-import { IterationControl } from "../iteration-control.ts";
-import { DecoderLike, DecoderSymbol, Mode, ReaderState } from "./common.ts";
-import { DataEvent, EndEvent } from "./events.ts";
-import { yieldEndOfDataItem } from "./iterating.ts";
+import { MajorType, serialize } from "../common.ts";
+import { IterationControl, IterationState } from "../iteration-control.ts";
+import { DecoderEvent } from "../main.ts";
+import { AsyncDecoderLike, AsyncDecoderSymbol, DecoderLike, Mode, ReaderState, SyncDecoderLike, SyncDecoderSymbol } from "./common.ts";
+import { DataEventData, EndEventData } from "./events.ts";
+import { IteratorPullResult } from "./iterating.ts";
+import { MapDecoderToIterator } from "./parse.ts";
 
 const utf8LengthMapping = [
 //   Expected     Mask         Length
@@ -21,11 +23,10 @@ export function handleTextStringData(state: ReaderState) {
         if (state.unsafeTextSlice.length > 0) {
             throw new Error(`Expected continuation of text string due to presence of incomplete UTF-8 sequence: ${JSON.stringify([...state.unsafeTextSlice])}`);
         }
-        yieldEndOfDataItem<EndEvent>(state,{
+        state.yieldEndOfDataItem({
             eventType: "end",
             majorType: MajorType.TextString,
-            [DecoderSymbol]: state.decoder!
-        });
+        } satisfies EndEventData);
     }
     if (state.isReaderDone) {
         throw new Error(`Unexpected end of stream when ${state.byteArrayNumberOfBytesToRead} bytes are left to read`);
@@ -74,34 +75,65 @@ export function handleTextStringData(state: ReaderState) {
             }
         }
 
-        IterationControl.yield<DataEvent>({
+        state.yieldEventData({
             eventType: "data",
             majorType: MajorType.TextString,
             data: new TextDecoder('UTF-8', { "fatal": true }).decode(safeSlice),
-            [DecoderSymbol]: state.decoder!
-        });
+        } satisfies DataEventData);
     }
 }
 
-export async function* consumeTextString(decoder: DecoderLike): AsyncIterableIterator<string,void,void> {
+
+
+export function consumeTextString<Decoder extends DecoderLike>(decoder: Decoder): MapDecoderToIterator<Decoder, string, void, void> {
     let counter = 1;
 
-    for await (const value of decoder[DecoderSymbol].events()) {
-        if (value.majorType != MajorType.TextString) {
-            throw new Error(`Unexpected major type ${value.majorType} while reading text string event: ${value}`);
+    function handleIteration(state: IterationState<string, IteratorPullResult<DecoderEvent>>) {
+        const result = state.pulled.shift();
+        if (!result) {
+            state.pull();
+            IterationControl.continue();
         }
-        if (value.eventType === "start") {
+        const { done, value } = result;
+        if (done) {
+            throw new Error(`Unexpected end of stream. Depth counter: ${counter}`);
+        }
+
+        if (value.eventData.majorType != MajorType.TextString) {
+            throw new Error(`Unexpected major type ${value.eventData.majorType} while reading text string event: ${serialize(value)}`);
+        }
+        if (value.eventData.eventType === "start") {
             counter++;
         }
-        if (value.eventType === "end") {
+        if (value.eventData.eventType === "end") {
             counter--;
         }
         if (counter === 0) {
-            return;
+            IterationControl.return();
         }
-        if (value.eventType === "data") {
-            yield value.data;
+        if (value.eventData.eventType === "data") {
+            IterationControl.yield(value.eventData.data);
         }
     }
-    throw new Error(`Unexpected end of stream. Depth counter: ${counter}`);
+
+    function asyncImpl(d: AsyncDecoderLike) {
+        const it = d[AsyncDecoderSymbol].events();
+        const pull = ()=>it.next() as Promise<IteratorPullResult<DecoderEvent>>;
+        return IterationControl.createAsyncIterator<string, IteratorPullResult<DecoderEvent>, never[]>(handleIteration, pull)[Symbol.asyncIterator]();
+    }
+
+    function syncImpl(d: SyncDecoderLike) {
+        const it = d[SyncDecoderSymbol].events();
+        const pull = ()=>it.next() as IteratorPullResult<DecoderEvent>;
+        return IterationControl.createSyncIterator<string, IteratorPullResult<DecoderEvent>, never[]>(handleIteration, pull)[Symbol.iterator]();
+    }
+
+    if (SyncDecoderSymbol in decoder && decoder[SyncDecoderSymbol]) {
+        return syncImpl(decoder as SyncDecoderLike) as MapDecoderToIterator<Decoder, string, void, void>;
+    }
+    if (AsyncDecoderSymbol in decoder && decoder[AsyncDecoderSymbol]) {
+        return asyncImpl(decoder as AsyncDecoderLike) as MapDecoderToIterator<Decoder, string, void, void>;
+    }
+
+    throw new Error(`Decoder is neither sync nor async`);
 }
