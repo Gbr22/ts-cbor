@@ -46,7 +46,7 @@ export function isNumberEvent<Event extends DecoderEvent>(event: Event): event i
     return false;
 }
 
-export function decodeNumberEvent(event: DecoderEvent) {
+export function decodeNumberEvent(event: DecoderEvent): number | bigint {
     if (event.eventData.eventType === "literal") {
         if (isIntegerMajorType(event.eventData.majorType)) {
             let number = decodeUint(event.eventData.data as Uint8Array);

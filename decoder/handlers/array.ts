@@ -4,7 +4,7 @@ import type { DecoderEvent, StartArrayEventData } from "../events.ts";
 import type { DecoderHandlerInstance, DecodingControl, DecodingHandler } from "../parse.ts";
 
 type ArrayStartEvent = DecoderEvent<DecoderLike, StartArrayEventData>;
-export const arrayDecodingHandler = {
+export const arrayDecodingHandler: DecodingHandler<ArrayStartEvent> = {
     match(event: DecoderEvent): event is ArrayStartEvent {
         return event.eventData.eventType === "start" && event.eventData.majorType === MajorType.Array;
     },

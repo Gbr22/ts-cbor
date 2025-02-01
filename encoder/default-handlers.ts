@@ -1,5 +1,5 @@
 import { SimpleValue } from "../decoder/simple-value.ts";
-import { createBigNum, writeArray, writeBoolean, type writeFalse, writeNull, writeObject, writeSimpleValue, type writeTrue, writeUndefined } from "../encoder.ts";
+import { createBigNum, writeArray, writeBoolean, writeNull, writeObject, writeSimpleValue, writeUndefined } from "../encoder.ts";
 import { writeTextString } from "../encoder.ts";
 import { writeMap } from "../encoder.ts";
 import { type EncodingHandler, writeAsyncIterable, writeByteString, writeFloat64, writeInt, writeSyncIterable } from "../encoder.ts";

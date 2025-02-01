@@ -41,8 +41,8 @@ export function createMapDecodingHandler(mapper: (entires: MapData)=>unknown): D
     return handler;
 }
 
-export const mapDecodingHandler = createMapDecodingHandler(entires=>new Map(entires));
-export const mapOrObjectDecodingHandler = createMapDecodingHandler(entires=>{
+export const mapDecodingHandler: DecodingHandler<MapStartEvent> = createMapDecodingHandler(entires=>new Map(entires));
+export const mapOrObjectDecodingHandler: DecodingHandler<MapStartEvent> = createMapDecodingHandler(entires=>{
     const isObject = entires.length > 0 && entires.every(e=>typeof e[0] === "string");
     if (isObject) {
         return Object.fromEntries(entires);

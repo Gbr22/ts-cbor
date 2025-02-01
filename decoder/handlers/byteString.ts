@@ -5,7 +5,7 @@ import type { DecoderEvent, StartByteStringEventData } from "../events.ts";
 import type { DecoderHandlerInstance, DecodingControl, DecodingHandler } from "../parse.ts";
 
 type ByteStringStartEvent = DecoderEvent<DecoderLike, StartByteStringEventData>;
-export const byteStringDecodingHandler = {
+export const byteStringDecodingHandler: DecodingHandler<ByteStringStartEvent> = {
     match(event: DecoderEvent): event is ByteStringStartEvent {
         return event.eventData.eventType === "start" && event.eventData.majorType === MajorType.ByteString;
     },

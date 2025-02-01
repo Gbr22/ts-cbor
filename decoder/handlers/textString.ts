@@ -4,7 +4,7 @@ import type { DecoderEvent, StartTextStringEventData } from "../events.ts";
 import type { DecoderHandlerInstance, DecodingControl, DecodingHandler } from "../parse.ts";
 
 type TextStringStartEvent = DecoderEvent<DecoderLike, StartTextStringEventData>;
-export const textStringDecodingHandler = {
+export const textStringDecodingHandler: DecodingHandler<TextStringStartEvent> = {
     match(event: DecoderEvent): event is TextStringStartEvent {
         return event.eventData.eventType === "start" && event.eventData.majorType === MajorType.TextString;
     },
