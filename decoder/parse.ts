@@ -1,71 +1,141 @@
 import { MajorType } from "../common.ts";
 import { ReadableValue } from "../encoder.ts";
-import { collect, collectBytes } from "../utils.ts";
+import { concatBytes } from "../utils.ts";
 import { consumeByteString } from "./byte-string.ts";
 import { AsyncDecoder } from "./common.ts";
-import { decodeNumberEvent, isNumberEvent } from "./numbers.ts";
-import { decodeSimpleValue, isSimpleValueEvent } from "./simple-value.ts";
 import { consumeTextString } from "./text-string.ts";
 import { serialize } from "../common.ts";
-import { SyncDecoder } from "../main.ts";
+import { DecoderEvent, SyncDecoder } from "../main.ts";
+import { handlePullResult, IterationControl, IterationState, pullFunction } from "../iteration-control.ts";
+import { arrayHandler } from "./handlers/array.ts";
+import { numberHandler } from "./handlers/number.ts";
+import { simpleValueHandler } from "./handlers/simpleValue.ts";
+import { mapHandler } from "./handlers/map.ts";
 
-export async function* transformDecoder(decoder: AsyncDecoder): AsyncIterableIterator<ReadableValue> {
-    for await (const event of decoder.events()) {
+type DecoderStackItemByteString = {
+    type: "byte-string";
+    values: Uint8Array[]
+    it: AsyncIterableIterator<Uint8Array>
+};
+type DecoderStackItemTextString = {
+    type: "text-string";
+    values: string[]
+    it: AsyncIterableIterator<string>
+};
+type DecoderStackItem = DecoderStackItemByteString | DecoderStackItemTextString;
+type DecoderStack = (DecoderStackItem | ComplexHandler)[];
+
+export type Control = {
+    yield(value: ReadableValue): never;
+    pop(): void;
+};
+export type ComplexHandler = {
+    type: "complex";
+    onYield(value: ReadableValue): void;
+    onEvent(event: DecoderEvent): void;
+};
+export type DecodingHandler<E extends DecoderEvent = DecoderEvent> = {
+    match(event: DecoderEvent): event is E;
+    handle(control: Control, event: E): void | ComplexHandler;
+};
+
+const defaultDecodingHandlers: DecodingHandler[] = [
+    numberHandler,
+    simpleValueHandler,
+    arrayHandler,
+    mapHandler
+];
+
+export function transformDecoder(decoder: AsyncDecoder, handlers: DecodingHandler[]): AsyncIterableIterator<ReadableValue> {
+    const it = decoder.events();
+    const next = it.next.bind(it);
+
+    
+    const stack: DecoderStack = [];
+
+    function yieldValue(y: ReadableValue): never {
+        if (stack[stack.length - 1]?.type === "complex") {
+            (stack[stack.length - 1] as ComplexHandler).onYield(y);
+            IterationControl.continue();
+        }
+        IterationControl.yield(y);
+    }
+
+    const control: Control = {
+        yield(value: ReadableValue): never {
+            yieldValue(value);
+        },
+        pop() {
+            stack.pop();
+        }
+    };
+
+    function handleEvent(event: DecoderEvent) {
+        if (stack[stack.length - 1]?.type === "complex") {
+            (stack[stack.length - 1] as ComplexHandler).onEvent(event);
+        }
         if (event.eventData.eventType === "end") {
-            return;
+            IterationControl.return();
         }
-        if (isNumberEvent(event)) {
-            yield decodeNumberEvent(event);
-            continue;
-        }
-        if (isSimpleValueEvent(event)) {
-            yield decodeSimpleValue(event.eventData.data);
-            continue;
-        }
-        if (event.eventData.eventType === "start" && event.eventData.majorType === MajorType.Array) {
-            const values = [];
-            for await (const item of transformDecoder(decoder)) {
-                values.push(item);
-            }
-            yield values;
-            continue;
-        }
-        if (event.eventData.eventType === "start" && event.eventData.majorType === MajorType.Map) {
-            const values = new Map();
-            let key: unknown;
-            let hasKey = false;
-            for await (const item of transformDecoder(decoder)) {
-                if (!hasKey) {
-                    key = item;
-                    hasKey = true;
-                    continue;
+        for (const handler of handlers) {
+            if (handler.match(event)) {
+                const result = handler.handle(control, event);
+                if (result) {
+                    stack.push(result);
                 }
-                hasKey = false;
-                values.set(key, item);
+                IterationControl.continue();
             }
-            yield values;
-            continue;
         }
         if (event.eventData.eventType === "start" && event.eventData.majorType === MajorType.ByteString) {
-            const it = await consumeByteString(decoder);
-            const bytes = await collectBytes(it);
-            yield bytes;
-            continue;
+            stack.push({ type: "byte-string", values: [], it: consumeByteString(decoder) });
+            IterationControl.continue();
         }
         if (event.eventData.eventType === "start" && event.eventData.majorType === MajorType.TextString) {
-            const it = await consumeTextString(decoder);
-            const parts = await collect(it);
-            const text = parts.join("");
-            yield text;
-            continue;
+            stack.push({ type: "text-string", values: [], it: consumeTextString(decoder) });
+            IterationControl.continue();
         }
     }
+
+    async function iterate(state: IterationState<ReadableValue, any, any[]>) {
+        if (stack[stack.length - 1]?.type === "byte-string") {
+            const { values, it } = stack[stack.length - 1] as DecoderStackItemByteString;
+            const { done, value } = await it.next();
+            if (done) {
+                stack.pop();
+                yieldValue(concatBytes(...values));
+            }
+            values.push(value);
+            IterationControl.continue();
+        }
+        if (stack[stack.length - 1]?.type === "text-string") {
+            const { values, it } = stack[stack.length - 1] as DecoderStackItemTextString;
+            const { done, value } = await it.next();
+            if (done) {
+                stack.pop();
+                yieldValue(values.join(""));
+            }
+            values.push(value);
+            IterationControl.continue();
+        }
+        handlePullResult(state.pulled);
+        if (state.pulled.length === 0) {
+            state.pull(next,[],(result: IteratorResult<DecoderEvent>)=>{
+                const { done, value: event } = result;
+                if (done) {
+                    IterationControl.return();
+                }
+                handleEvent(event);
+            });
+        }
+    }
+
+    return IterationControl.createAsyncIterator<any, any, any[]>(iterate, pullFunction)[Symbol.asyncIterator]();
 }
 
 export async function parseDecoder<T>(decoder: AsyncDecoder): Promise<T> {
     let hasValue = false;
     let value: unknown;
-    for await (const item of transformDecoder(decoder)) {
+    for await (const item of transformDecoder(decoder, defaultDecodingHandlers)) {
         if (hasValue) {
             throw new Error(`Unexpected item; end of stream expected. Item is: ${serialize(item)}`);
         }

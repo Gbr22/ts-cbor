@@ -51,8 +51,8 @@ export class IterationControl<Yield, Exit> {
         }
         async function* generator(): AsyncIterableIterator<Yield,Return,void> {
             while (true) {
-                const first = queued.shift();
-                if (first !== undefined) {
+                if (queued.length > 0) {
+                    const first = queued.shift()!;
                     yield first;
                     continue;
                 }
@@ -143,3 +143,29 @@ export class IterationControl<Yield, Exit> {
         return generator();
     }
 };
+
+export function pullFunction<Fn extends (...args: any[])=>any>(fn: Fn, args: Parameters<Fn>, callback: (value: Awaited<ReturnType<Fn>>)=>void) {
+    const result = fn(...args);
+    if (result instanceof Promise) {
+        return result.then(result=>{
+            return [fn, args, result, callback];    
+        });
+    }
+    return [fn, args, result, callback];
+};
+
+type PullFunctionResult<Fn extends (...args: any[])=>any> = [
+    Fn,
+    Parameters<Fn>,
+    Awaited<ReturnType<Fn>>,
+    (value: Awaited<ReturnType<Fn>>)=>void
+];
+
+export function handlePullResult<Results extends PullFunctionResult<any>[]>(pulled: Results) {
+    while (pulled.length > 0) {
+        const pulledItem = pulled.shift()!;
+        if (pulled) {
+            pulledItem[3](pulledItem[2]);
+        }
+    }
+}

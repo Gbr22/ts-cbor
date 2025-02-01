@@ -29,6 +29,27 @@ export interface SyncDecoder {
     [SyncDecoderSymbol]: SyncDecoder;
 }
 export type Decoder = AsyncDecoder | SyncDecoder;
+
+export type MapDecoderToIterableIterator<D,A,B,C> = (
+    D extends AsyncDecoder ?
+        AsyncIterableIterator<A,B,C>
+        :
+        D extends SyncDecoder ?
+            IterableIterator<A,B,C>
+            :
+            never
+);
+
+export type MapDecoderToReturnType<D,T> = (
+    D extends AsyncDecoder ?
+        Promise<T>
+        :
+        D extends SyncDecoder ?
+            T
+            :
+            never
+);
+
 export const Mode = Object.freeze({
     ExpectingDataItem: 0,
     ReadingArgument: 1,

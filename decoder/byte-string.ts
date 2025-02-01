@@ -1,9 +1,8 @@
 import { MajorType } from "../common.ts";
 import { IterationControl, IterationState } from "../iteration-control.ts";
-import { AsyncDecoderLike, AsyncDecoderSymbol, DecoderLike, Mode, ReaderState, SyncDecoderLike, SyncDecoderSymbol } from "./common.ts";
+import { AsyncDecoderLike, AsyncDecoderSymbol, DecoderLike, MapDecoderToIterableIterator, Mode, ReaderState, SyncDecoderLike, SyncDecoderSymbol } from "./common.ts";
 import { DataEventData, DecoderEvent, EndEventData } from "./events.ts";
 import { IteratorPullResult } from "./iterating.ts";
-import { MapDecoderToIterator } from "./parse.ts";
 
 export function handleByteStringData(state: ReaderState) {
     if (state.byteArrayNumberOfBytesToRead <= 0) {
@@ -29,7 +28,7 @@ export function handleByteStringData(state: ReaderState) {
     }
 }
 
-export function consumeByteString<Decoder extends DecoderLike>(decoder: Decoder): MapDecoderToIterator<Decoder, Uint8Array, void, void> {
+export function consumeByteString<Decoder extends DecoderLike>(decoder: Decoder): MapDecoderToIterableIterator<Decoder, Uint8Array, void, void> {
     let counter = 1;
 
     function handleIteration(state: IterationState<string, IteratorPullResult<DecoderEvent>>) {
@@ -73,10 +72,10 @@ export function consumeByteString<Decoder extends DecoderLike>(decoder: Decoder)
     }
     
     if (SyncDecoderSymbol in decoder && decoder[SyncDecoderSymbol]) {
-        return syncImpl(decoder as SyncDecoderLike) as MapDecoderToIterator<Decoder, Uint8Array, void, void>;
+        return syncImpl(decoder as SyncDecoderLike) as MapDecoderToIterableIterator<Decoder, Uint8Array, void, void>;
     }
     if (AsyncDecoderSymbol in decoder && decoder[AsyncDecoderSymbol]) {
-        return asyncImpl(decoder as AsyncDecoderLike) as MapDecoderToIterator<Decoder, Uint8Array, void, void>;
+        return asyncImpl(decoder as AsyncDecoderLike) as MapDecoderToIterableIterator<Decoder, Uint8Array, void, void>;
     }
     
     throw new Error(`Decoder is neither sync nor async`);
