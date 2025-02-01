@@ -3,14 +3,14 @@ import { StartByteStringEventData } from "../../main.ts";
 import { concatBytes } from "../../utils.ts";
 import { DecoderLike } from "../common.ts";
 import { DecoderEvent } from "../events.ts";
-import { DecoderStackItem, DecodingControl, DecodingHandler } from "../parse.ts";
+import { DecoderHandlerInstance, DecodingControl, DecodingHandler } from "../parse.ts";
 
 type ByteStringStartEvent = DecoderEvent<DecoderLike, StartByteStringEventData>;
-export const byteStringHandler = {
+export const byteStringDecodingHandler = {
     match(event: DecoderEvent): event is ByteStringStartEvent {
         return event.eventData.eventType === "start" && event.eventData.majorType === MajorType.ByteString;
     },
-    handle(control: DecodingControl): DecoderStackItem {
+    handle(control: DecodingControl): DecoderHandlerInstance {
         const values: Uint8Array[] = [];
         let counter = 1;
         return {
@@ -36,6 +36,6 @@ export const byteStringHandler = {
             onYield(value) {
                 throw new Error(`Unexpected yield while reading byte string: ${serialize(value)}`);
             }
-        } as DecoderStackItem;
+        } as DecoderHandlerInstance;
     }
 } satisfies DecodingHandler<ByteStringStartEvent>;

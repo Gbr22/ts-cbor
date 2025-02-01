@@ -1,9 +1,8 @@
 // deno-lint-ignore-file
 import { assertEquals } from "@std/assert/equals";
-import { AsyncWriter, intoAsyncWriter, decoderFromStream, parseDecoder, WritableValue, writeValue } from "./main.ts";
+import { AsyncWriter, intoAsyncWriter, decoderFromStream, parseDecoder, writeValue } from "./main.ts";
 import { iterableToStream, concatBytes, DropFirst } from "./utils.ts";
-import { intoSyncWriter, encodeValueSync } from "./encoder.ts";
-import { decoderFromIterable } from "./decoder/iterating.ts";
+import { encodeValueSync } from "./encoder.ts";
 import { decodeValue } from "./decoder/parse.ts";
 
 export function stripWhitespace(s: string) {
@@ -96,7 +95,7 @@ export function byteStringToStream(str: string, bufferSize: number = 5) {
     return bytesToStream(stringToBytes(str), bufferSize);
 }
 
-export async function assertWriteReadIdentityAsync(value: WritableValue) {
+export async function assertWriteReadIdentityAsync(value: unknown) {
     const { getBytes, stream } = byteWritableStream();
     const writer = intoAsyncWriter(stream.getWriter());
     await writeValue(writer,value);
@@ -107,13 +106,13 @@ export async function assertWriteReadIdentityAsync(value: WritableValue) {
     assertEquals(newValue, value, "Expect value to be rewritten correctly");
 }
 
-export function assertWriteReadIdentitySync(value: WritableValue) {
+export function assertWriteReadIdentitySync(value: unknown) {
     const bytes = encodeValueSync(value);
     const newValue = decodeValue(bytes);
-    assertEquals(newValue, value, "Expect value to be rewritten correctly");
+    assertEquals(newValue, value, `Expect value to be rewritten correctly`);
 }
 
-export async function assertWriteReadIdentity(value: WritableValue) {
+export async function assertWriteReadIdentity(value: unknown) {
     assertWriteReadIdentitySync(value);
     await assertWriteReadIdentityAsync(value);
 }

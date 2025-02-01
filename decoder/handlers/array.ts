@@ -1,16 +1,15 @@
 import { MajorType } from "../../common.ts";
-import { ReadableValue } from "../../encoder.ts";
 import { DecoderLike } from "../common.ts";
 import { DecoderEvent, StartArrayEventData } from "../events.ts";
-import { DecoderStackItem, DecodingControl, DecodingHandler } from "../parse.ts";
+import { DecoderHandlerInstance, DecodingControl, DecodingHandler } from "../parse.ts";
 
 type ArrayStartEvent = DecoderEvent<DecoderLike, StartArrayEventData>;
-export const arrayHandler = {
+export const arrayDecodingHandler = {
     match(event: DecoderEvent): event is ArrayStartEvent {
         return event.eventData.eventType === "start" && event.eventData.majorType === MajorType.Array;
     },
-    handle(control: DecodingControl): DecoderStackItem {
-        const values: ReadableValue[] = [];
+    handle(control: DecodingControl): DecoderHandlerInstance {
+        const values: unknown[] = [];
         return {
             onEvent(event) {
                 if (event.eventData.eventType === "end") {
@@ -21,6 +20,6 @@ export const arrayHandler = {
             onYield(value) {
                 values.push(value);
             }
-        } as DecoderStackItem;
+        } as DecoderHandlerInstance;
     }
 } satisfies DecodingHandler<ArrayStartEvent>;

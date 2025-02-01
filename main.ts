@@ -1,3 +1,30 @@
+export { createMapDecodingHandler } from "./decoder/handlers/map.ts";
+export {
+	defaultDecodingHandlers,
+	numberDecodingHandler,
+    simpleValueDecodingHandler,
+    arrayDecodingHandler,
+    mapOrObjectDecodingHandler,
+    mapDecodingHandler,
+    textStringDecodingHandler,
+    byteStringDecodingHandler,
+} from "./decoder/handlers.ts";
+export {
+	integerEncodingHandler,
+	floatEncodingHandler,
+	booleanEncodingHandler,
+	nullEncodingHandler,
+	undefinedEncodingHandler,
+	stringEncodingHandler,
+	bigintEncodingHandler,
+	uint8ArrayEncodingHandler,
+	arrayBufferEncodingHandler,
+	mapEncodingHandler,
+	arrayEncodingHandler,
+	syncIterableEncodingHandler,
+	asyncIterableEncodingHandler,
+	objectEncodingHandler,
+} from "./encoder/default-handlers.ts";
 export {
 	decodeSimpleValue,
 	isSimpleValueEvent,
@@ -9,12 +36,12 @@ export {
 	decodeNumberEvent,
 } from "./decoder/numbers.ts";
 export {
+	encodeValueSync,
 	writeByteStream,
 	writeByteString,
 	writeTextStream,
 	writeTextString,
 	writeValue,
-	encodeValueSync,
 	writeFalse,
 	writeTrue,
 	writeNull,
@@ -37,8 +64,12 @@ export {
 	writeBreak,
 	writeArrayHeader,
 	writeSimpleValue,
-	type WritableValue,
-	type ReadableValue,
+	writeMap,
+	writeObject,
+	writeArray,
+	writeIterable,
+	writeAsyncIterable,
+	writeSyncIterable,
 	type AsyncWriter,
 	type AsyncWriterSymbol,
 	type SyncWriter,
@@ -46,6 +77,11 @@ export {
 	type WriterReturnType,
 	type WriterErrorType,
 	intoAsyncWriter,
+	intoSyncWriter,
+	mustUseAsyncWriter,
+	sequentialWriteFunctions,
+	sequentialWriteGenerator,
+	type EncodingHandler,
 } from "./encoder.ts";
 export {
 	parseDecoder,

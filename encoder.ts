@@ -1,5 +1,6 @@
 import { AdditionalInfo, MajorType } from "./common.ts";
 import { UnknownSimpleValue } from "./decoder/simple-value.ts";
+import { defaultEncodingHandlers } from "./encoder/default-handlers.ts";
 import { concatBytes } from "./utils.ts";
 
 export const AsyncWriterSymbol = Symbol("AsyncWriter");
@@ -22,7 +23,7 @@ export type WriterReturnType<Writer, Param = void> = Writer extends AsyncWriter 
 export type WriterErrorType<Writer> = WriterReturnType<Writer, never>;
 
 type SequentialGenerator = ()=>(IterableIterator<void | Promise<void>>);
-export function sequentialGenerator<Writer extends AnyWriter>(writer: Writer, gen: SequentialGenerator): WriterReturnType<Writer> {
+export function sequentialWriteGenerator<Writer extends AnyWriter>(writer: Writer, gen: SequentialGenerator): WriterReturnType<Writer> {
     if (AsyncWriterSymbol in writer && writer[AsyncWriterSymbol]) {
         return (async () => {
             for (const promise of gen()) {
@@ -41,7 +42,7 @@ export function sequentialGenerator<Writer extends AnyWriter>(writer: Writer, ge
 }
 
 type FunctionSequence = (()=>(void | Promise<void>))[];
-export function sequentialFunctions<Writer extends AnyWriter>(writer: Writer, sequence: FunctionSequence): WriterReturnType<Writer> {
+export function sequentialWriteFunctions<Writer extends AnyWriter>(writer: Writer, sequence: FunctionSequence): WriterReturnType<Writer> {
     if (AsyncWriterSymbol in writer && writer[AsyncWriterSymbol]) {
         return (async () => {
             for (const fn of sequence) {
@@ -65,8 +66,8 @@ export function mustUseAsyncWriter<Writer extends AnyWriter>(writer: Writer, fn:
     throw new Error("Expected async writer");
 }
 
-function write<Writer extends AnyWriter>(writer: Writer, value: Uint8Array): WriterReturnType<Writer> {
-    return writer.write(value) as WriterReturnType<Writer>;
+function write<Writer extends AnyWriter>(writer: Writer, value: Uint8Array | ArrayBuffer): WriterReturnType<Writer> {
+    return writer.write(new Uint8Array(value)) as WriterReturnType<Writer>;
 }
 
 export function writeFalse<Writer extends AnyWriter>(writer: Writer): WriterReturnType<Writer> {
@@ -180,8 +181,8 @@ export function writeInt64<Writer extends AnyWriter>(writer: Writer, number: num
     return writeArgument64(writer, type, value);
 }
 
-export function writeByteString<Writer extends AnyWriter>(writer: Writer, value: Uint8Array): WriterReturnType<Writer> {
-    return sequentialGenerator(writer, function*(){
+export function writeByteString<Writer extends AnyWriter>(writer: Writer, value: Uint8Array | ArrayBuffer): WriterReturnType<Writer> {
+    return sequentialWriteGenerator(writer, function*(){
         yield writeArgument(writer, MajorType.ByteString, value.byteLength);
         yield write(writer, value);
     });
@@ -197,7 +198,7 @@ export async function writeByteStream(writer: AsyncWriter, stream: ReadableStrea
 
 export function writeTextString<Writer extends AnyWriter>(writer: Writer, value: string): WriterReturnType<Writer> {
     const buffer = new TextEncoder().encode(value);
-    return sequentialGenerator(writer, function*() {
+    return sequentialWriteGenerator(writer, function*() {
         yield writeArgument(writer, MajorType.TextString, buffer.byteLength);
         yield write(writer, buffer);
     });
@@ -240,7 +241,7 @@ function writeFloatN<Writer extends AnyWriter,ArrayConstructor extends typeof Fl
     }
     const buffer = new Uint8Array(floatArray.buffer);
     const reverse = new Uint8Array([...buffer].reverse());
-    return sequentialGenerator(writer, function*() {
+    return sequentialWriteGenerator(writer, function*() {
         yield writeHeader(writer, MajorType.SimpleValue, simpleValue);
         yield write(writer,reverse);
     });
@@ -272,75 +273,78 @@ export function writeMapHeader<Writer extends AnyWriter>(writer: Writer, length?
     return writeArgument(writer, MajorType.Map, length);
 }
 
-type PrimitiveWritableValue = number | bigint | Uint8Array | boolean | null | undefined | string;
-type PrimitiveReadableValue = PrimitiveWritableValue | UnknownSimpleValue;
-export type WritableValue = PrimitiveWritableValue | Map<WritableValue,WritableValue> | Iterable<WritableValue> | AsyncIterable<WritableValue> | Array<WritableValue>;
-export type ReadableValue = PrimitiveReadableValue | Map<ReadableValue,ReadableValue> | Iterable<ReadableValue> | AsyncIterable<ReadableValue> | Array<ReadableValue>;
+export function writeMap<Writer extends AnyWriter>(writer: Writer, value: Map<unknown, unknown>): WriterReturnType<Writer> {
+    return sequentialWriteGenerator(writer, function*() {
+        yield writeMapHeader(writer, value.size);
+        for (const [key, item] of value) {
+            yield writeValue(writer, key);
+            yield writeValue(writer, item);
+        }
+    });
+}
 
-export function writeValue<Writer extends AnyWriter>(writer: Writer, value: PrimitiveWritableValue | WritableValue): WriterReturnType<Writer> {
-    if (typeof value === "number" && Number.isInteger(value)) {
-        return writeInt(writer, value);
+export function writeArray<Writer extends AnyWriter>(writer: Writer, value: unknown[] | Array<unknown>): WriterReturnType<Writer> {
+    return sequentialWriteGenerator(writer, function*() {
+        yield writeArrayHeader(writer, value.length);
+        for (const e of value) {
+            yield writeValue(writer, e);
+        }
+    });
+}
+
+export function writeObject<Writer extends AnyWriter>(writer: Writer, value: object): WriterReturnType<Writer> {
+    return sequentialWriteGenerator(writer, function*() {
+        const entries = Object.entries(value);
+        yield writeMapHeader(writer, entries.length);
+        for (const [key, item] of entries) {
+            yield writeValue(writer, key);
+            yield writeValue(writer, item);
+        }
+    });
+}
+
+export function writeSyncIterable<Writer extends AnyWriter>(writer: Writer, value: Iterable<unknown>): WriterReturnType<Writer> {
+    return sequentialWriteGenerator(writer,function*(){
+        yield writeArrayHeader(writer);
+        for (const e of value as Iterable<unknown>) {
+            yield writeValue(writer, e);
+        }
+        yield writeBreak(writer);
+    });
+}
+
+export function writeAsyncIterable<Writer extends AnyWriter>(writer: Writer, value: AsyncIterable<unknown>): WriterReturnType<Writer> {
+    return mustUseAsyncWriter(writer, async()=>{
+        await writeArrayHeader(writer);
+        for await (const e of value as AsyncIterable<unknown>) {
+            await writeValue(writer, e);
+        }
+        await writeBreak(writer);
+    });
+}
+
+export function writeIterable<Writer extends AnyWriter>(writer: Writer, value: Iterable<unknown> | AsyncIterable<unknown>): WriterReturnType<Writer> {
+    if (value && typeof value === "object" && Symbol.iterator in value) {
+        return writeSyncIterable(writer, value);
     }
-    if (typeof value === "number") {
-        return writeFloat64(writer, value);
+    if (value && typeof value === "object" && Symbol.asyncIterator in value) {
+        return writeAsyncIterable(writer, value);
     }
-    if (typeof value === "bigint") {
-        return writeInt(writer, value);
+    throw new Error("Value is not iterable or async iterable");
+}
+
+export type EncodingHandler<T = unknown> = {
+    match(value: unknown): value is T;
+    write<Writer extends AnyWriter>(writer: Writer, value: T): WriterReturnType<Writer>;
+};
+
+export function writeValue<Writer extends AnyWriter>(writer: Writer, value: unknown, encodingHandlers: EncodingHandler[] = defaultEncodingHandlers): WriterReturnType<Writer> {
+    for (const handler of encodingHandlers) {
+        if (handler.match(value)) {
+            return handler.write(writer, value);
+        }
     }
-    if (value instanceof Uint8Array) {
-        return writeByteString(writer, value);
-    }
-    if (typeof value === "string") {
-        return writeTextString(writer, value);
-    }
-    if (value === false) {
-        return writeFalse(writer);
-    }
-    if (value === true) {
-        return writeTrue(writer);
-    }
-    if (value === null) {
-        return writeNull(writer);
-    }
-    if (value === undefined) {
-        return writeUndefined(writer);
-    }
-    if (value instanceof Map) {
-        return sequentialGenerator(writer, function*() {
-            yield writeMapHeader(writer, value.size);
-            for (const [key, item] of value) {
-                yield writeValue(writer, key);
-                yield writeValue(writer, item);
-            }
-        });
-    }
-    if (value instanceof Array) {
-        return sequentialGenerator(writer, function*() {
-            yield writeArrayHeader(writer, value.length);
-            for (const e of value) {
-                yield writeValue(writer, e);
-            }
-        });
-    }
-    if (Symbol.asyncIterator in value && typeof (value)[Symbol.asyncIterator] === "function") {
-        return mustUseAsyncWriter(writer, async()=>{
-            await writeArrayHeader(writer);
-            for await (const e of value) {
-                await writeValue(writer, e);
-            }
-            await writeBreak(writer);
-        });
-    }
-    if (Symbol.iterator in value && typeof (value)[Symbol.iterator] === "function") {
-        return mustUseAsyncWriter(writer,async ()=>{
-            await writeArrayHeader(writer);
-            for (const e of value) {
-                await writeValue(writer, e);
-            }
-            await writeBreak(writer);    
-        });
-    }
-    return sequentialGenerator(writer, function*() {});
+    return sequentialWriteGenerator(writer, function*() {});
 }
 
 export function intoAsyncWriter<Writer extends {
@@ -393,13 +397,13 @@ export function intoSyncWriter<Writer extends {
     }) as Writer & SyncWriter;
 }
 
-export function encodeValueSync(value: WritableValue): Uint8Array {
+export function encodeValueSync(value: unknown, encodingHandlers: EncodingHandler[] = defaultEncodingHandlers): Uint8Array {
     const bytesArray: Uint8Array[] = [];
     const writer = intoSyncWriter({
         write(value: Uint8Array) {
             bytesArray.push(value);
         }
     });
-    writeValue(writer,value);
+    writeValue(writer,value,encodingHandlers);
     return concatBytes(...bytesArray);
 }

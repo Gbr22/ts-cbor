@@ -13,9 +13,9 @@ Deno.test(async function decodeIndefiniteLengthMapTest() {
             21         # Second value, -2
             FF         # "break"
         `,
-        new Map<unknown,unknown>([
-            ["Fun", true],
-            ["Amt", -2],
-        ])
+        {
+            "Fun": true,
+            "Amt": -2,
+        }
     );
 });

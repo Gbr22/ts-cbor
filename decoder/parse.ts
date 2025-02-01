@@ -1,46 +1,31 @@
-import { ReadableValue } from "../encoder.ts";
 import { AsyncDecoder, AsyncDecoderLike, AsyncDecoderSymbol, DecoderLike, MapDecoderToIterableIterator, MapDecoderToReturnType, SyncDecoderLike, SyncDecoderSymbol } from "./common.ts";
 import { serialize } from "../common.ts";
 import { DecoderEvent, decoderFromIterable, SyncDecoder } from "../main.ts";
 import { handlePullResult, IterationControl, pullFunction, PullFunctionArgs, PullFunctionIterationState, PullFunctionResult } from "../iteration-control.ts";
-import { arrayHandler } from "./handlers/array.ts";
-import { numberHandler } from "./handlers/number.ts";
-import { simpleValueHandler } from "./handlers/simpleValue.ts";
-import { mapHandler } from "./handlers/map.ts";
-import { byteStringHandler } from "./handlers/byteString.ts";
-import { textStringHandler } from "./handlers/textString.ts";
+import { defaultDecodingHandlers } from "./handlers.ts";
 
-type DecoderStack = DecoderStackItem[];
+type DecoderStack = DecoderHandlerInstance[];
 
 export type DecodingControl = {
-    yield(value: ReadableValue): never;
+    yield(value: unknown): never;
     pop(): void;
     continue(): never;
 };
-export type DecoderStackItem = {
-    onYield(value: ReadableValue): void;
+export type DecoderHandlerInstance = {
+    onYield(value: unknown): void;
     onEvent(event: DecoderEvent): void;
 };
 export type DecodingHandler<E extends DecoderEvent = DecoderEvent> = {
     match(event: DecoderEvent): event is E;
-    handle(control: DecodingControl, event: E): void | DecoderStackItem;
+    handle(control: DecodingControl, event: E): void | DecoderHandlerInstance;
 };
 
-export const defaultDecodingHandlers: DecodingHandler[] = [
-    numberHandler,
-    simpleValueHandler,
-    arrayHandler,
-    mapHandler,
-    byteStringHandler,
-    textStringHandler,
-];
-
-export function transformDecoder<Decoder extends DecoderLike>(decoder: Decoder, handlers: DecodingHandler[]): MapDecoderToIterableIterator<Decoder, ReadableValue, void, void> {
+export function transformDecoder<Decoder extends DecoderLike>(decoder: Decoder, handlers: DecodingHandler[] = defaultDecodingHandlers): MapDecoderToIterableIterator<Decoder, unknown, void, void> {
     const stack: DecoderStack = [];
 
-    function yieldValue(y: ReadableValue): never {
+    function yieldValue(y: unknown): never {
         if (stack.length > 0) {
-            (stack[stack.length - 1] as DecoderStackItem).onYield(y);
+            (stack[stack.length - 1] as DecoderHandlerInstance).onYield(y);
             IterationControl.continue();
         }
         IterationControl.yield(y);
@@ -58,7 +43,7 @@ export function transformDecoder<Decoder extends DecoderLike>(decoder: Decoder, 
 
     function handleEvent(event: DecoderEvent) {
         if (stack.length > 0) {
-            (stack[stack.length - 1] as DecoderStackItem).onEvent(event);
+            (stack[stack.length - 1] as DecoderHandlerInstance).onEvent(event);
         }
         if (event.eventData.eventType === "end") {
             IterationControl.return();
@@ -87,7 +72,7 @@ export function transformDecoder<Decoder extends DecoderLike>(decoder: Decoder, 
     const next = it.next.bind(it);
     type PullableFunctions = typeof next;
 
-    function iterate(state: PullFunctionIterationState<ReadableValue, PullableFunctions>) {
+    function iterate(state: PullFunctionIterationState<unknown, PullableFunctions>) {
         handlePullResult(state.pulled);
         if (state.pulled.length === 0) {
             state.pull(next,[],(result)=>{
@@ -106,26 +91,26 @@ export function transformDecoder<Decoder extends DecoderLike>(decoder: Decoder, 
     if (SyncDecoderSymbol in decoder) {
         return IterationControl
             .createSyncIterator<
-                ReadableValue,
+                unknown,
                 PullFunctionResult<PullableFunctions>,
                 PullFunctionArgs<PullableFunctions>
             >(
                 iterate,
                 pullFunction<PullableFunctions>
             )[Symbol.iterator]() as
-            MapDecoderToIterableIterator<Decoder, ReadableValue, void, void>;
+            MapDecoderToIterableIterator<Decoder, unknown, void, void>;
     }
     if (AsyncDecoderSymbol in decoder) {
         return IterationControl
             .createAsyncIterator<
-                ReadableValue,
+                unknown,
                 PullFunctionResult<PullableFunctions>,
                 PullFunctionArgs<PullableFunctions>
             >(
                 iterate,
                 pullFunction<PullableFunctions>
             )[Symbol.asyncIterator]() as
-            MapDecoderToIterableIterator<Decoder, ReadableValue, void, void>;
+            MapDecoderToIterableIterator<Decoder, unknown, void, void>;
     }
 
     throw new Error("Decoder is neither sync nor async");
@@ -168,33 +153,33 @@ export function parseDecoder<Decoder extends DecoderLike>(decoder: Decoder, hand
     throw new Error("Decoder is neither sync nor async");
 }
 
-export type MapDecoderToIterator<D,A,B,C> = (
-    D extends AsyncDecoderLike ?
-        AsyncIterableIterator<A,B,C>
+export type MapDecoderToIterator<Decoder = DecoderLike, Yield = unknown, Return = unknown, Next = unknown> = (
+    Decoder extends AsyncDecoderLike ?
+        AsyncIterableIterator<Yield,Return,Next>
         :
-        D extends SyncDecoderLike ?
-            IterableIterator<A,B,C>
+        Decoder extends SyncDecoderLike ?
+            IterableIterator<Yield,Return,Next>
             :
             never
 );
 
-type MapValueToDecoder<V> = (
-    V extends Uint8Array ? SyncDecoder :
-    V extends Iterable<Uint8Array> ? SyncDecoder :
-    V extends AsyncIterable<Uint8Array> ? AsyncDecoder :
+type MapValueToDecoder<Value> = (
+    Value extends Uint8Array ? SyncDecoder :
+    Value extends Iterable<Uint8Array> ? SyncDecoder :
+    Value extends AsyncIterable<Uint8Array> ? AsyncDecoder :
     never
 );
 
-export function decodeValue<V extends Uint8Array | Iterable<Uint8Array> | AsyncIterable<Uint8Array>>(value: V): MapDecoderToReturnType<MapValueToDecoder<V>, unknown> {
+export function decodeValue<V extends Uint8Array | Iterable<Uint8Array> | AsyncIterable<Uint8Array>>(value: V, decodingHandlers: DecodingHandler[] = defaultDecodingHandlers): MapDecoderToReturnType<MapValueToDecoder<V>, unknown> {
     type R = MapDecoderToReturnType<MapValueToDecoder<V>, unknown>;
     if (value instanceof Uint8Array) {
-        return parseDecoder(decoderFromIterable([value])) as R;
+        return parseDecoder(decoderFromIterable([value]), decodingHandlers) as R;
     }
     if (Symbol.iterator in value) {
-        return parseDecoder(decoderFromIterable(value as Iterable<Uint8Array>)) as R;
+        return parseDecoder(decoderFromIterable(value as Iterable<Uint8Array>), decodingHandlers) as R;
     }
     if (Symbol.asyncIterator in value) {
-        return parseDecoder(decoderFromIterable(value as AsyncIterable<Uint8Array>)) as R;
+        return parseDecoder(decoderFromIterable(value as AsyncIterable<Uint8Array>), decodingHandlers) as R;
     }
     throw new Error("Expected value to be Uint8Array or (sync/async) iterable of Uint8Array");
 }

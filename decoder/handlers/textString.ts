@@ -1,14 +1,14 @@
 import { MajorType, serialize } from "../../common.ts";
 import { DecoderLike } from "../common.ts";
 import { DecoderEvent, StartTextStringEventData } from "../events.ts";
-import { DecoderStackItem, DecodingControl, DecodingHandler } from "../parse.ts";
+import { DecoderHandlerInstance, DecodingControl, DecodingHandler } from "../parse.ts";
 
 type TextStringStartEvent = DecoderEvent<DecoderLike, StartTextStringEventData>;
-export const textStringHandler = {
+export const textStringDecodingHandler = {
     match(event: DecoderEvent): event is TextStringStartEvent {
         return event.eventData.eventType === "start" && event.eventData.majorType === MajorType.TextString;
     },
-    handle(control: DecodingControl): DecoderStackItem {
+    handle(control: DecodingControl): DecoderHandlerInstance {
         const values: string[] = [];
         let counter = 1;
         return {
@@ -34,6 +34,6 @@ export const textStringHandler = {
             onYield(value) {
                 throw new Error(`Unexpected yield while reading text string: ${serialize(value)}`);
             }
-        } as DecoderStackItem;
+        } as DecoderHandlerInstance;
     }
 } satisfies DecodingHandler<TextStringStartEvent>;
