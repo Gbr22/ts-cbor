@@ -1,6 +1,5 @@
 import { MajorType, serialize } from "../../common.ts";
 import { concatBytes } from "../../utils.ts";
-import type { DecoderLike } from "../common.ts";
 import type { DecoderEvent, StartByteStringEventData } from "../events.ts";
 import type {
 	DecoderHandlerInstance,
@@ -8,7 +7,7 @@ import type {
 	DecodingHandler,
 } from "../parse.ts";
 
-type ByteStringStartEvent = DecoderEvent<DecoderLike, StartByteStringEventData>;
+type ByteStringStartEvent = DecoderEvent<StartByteStringEventData>;
 export const byteStringDecodingHandler: DecodingHandler<ByteStringStartEvent> =
 	{
 		match(event: DecoderEvent): event is ByteStringStartEvent {

@@ -1,5 +1,4 @@
 import { MajorType } from "../../common.ts";
-import type { DecoderLike } from "../common.ts";
 import {
 	bindIsStartEvent,
 	type DecoderEvent,
@@ -11,7 +10,7 @@ import type {
 	DecodingHandler,
 } from "../parse.ts";
 
-type ArrayStartEvent = DecoderEvent<DecoderLike, StartArrayEventData>;
+type ArrayStartEvent = DecoderEvent<StartArrayEventData>;
 export const arrayDecodingHandler: DecodingHandler<ArrayStartEvent> = {
 	match: bindIsStartEvent(MajorType.Array),
 	handle(control: DecodingControl): DecoderHandlerInstance {

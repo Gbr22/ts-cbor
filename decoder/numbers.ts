@@ -37,7 +37,7 @@ export function decodeFloat(array: Uint8Array): number {
 
 export function isNumberEvent<Event extends DecoderEvent>(
 	event: Event,
-): event is Event & DecoderEvent<DecoderLike, NumberEventData> {
+): event is Event & DecoderEvent<NumberEventData, DecoderLike> {
 	if (event.eventData.eventType != "literal") {
 		return false;
 	}

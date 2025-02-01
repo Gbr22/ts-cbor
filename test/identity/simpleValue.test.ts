@@ -43,14 +43,14 @@ Deno.test(async function simpleValueNumericIdentityTest() {
 			"Expect SimpleValue major type",
 		);
 		assertEquals(
-			(next as DecoderEvent<DecoderLike, SimpleValueLiteralEventData>)
+			(next as DecoderEvent<SimpleValueLiteralEventData, DecoderLike>)
 				.eventData
 				.simpleValueType,
 			"simple",
 			"Expect simple value type",
 		);
 		assertEquals(
-			(next as DecoderEvent<DecoderLike, SimpleValueLiteralEventData>)
+			(next as DecoderEvent<SimpleValueLiteralEventData, DecoderLike>)
 				.eventData
 				.data,
 			simpleValue,

@@ -1,5 +1,4 @@
 import { MajorType } from "../../common.ts";
-import type { DecoderLike } from "../common.ts";
 import type { DecoderEvent, StartMapEventData } from "../events.ts";
 import type {
 	DecoderHandlerInstance,
@@ -7,7 +6,7 @@ import type {
 	DecodingHandler,
 } from "../parse.ts";
 
-type MapStartEvent = DecoderEvent<DecoderLike, StartMapEventData>;
+type MapStartEvent = DecoderEvent<StartMapEventData>;
 
 type Entry = [unknown, unknown];
 type MapData = Entry[];

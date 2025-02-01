@@ -5,7 +5,6 @@ import {
 	decodeNumberEvent,
 	type DecoderEvent,
 	decoderFromStream,
-	type DecoderLike,
 	type FloatLiteralEventData,
 	MajorType,
 	writeFloat16,
@@ -40,14 +39,14 @@ async function floatTest(
 		"Expect SimpleValue major type",
 	);
 	assertEquals(
-		(next as DecoderEvent<DecoderLike, FloatLiteralEventData>).eventData
+		(next as DecoderEvent<FloatLiteralEventData>).eventData
 			.simpleValueType,
 		"float",
 		"Expect simple value type",
 	);
 	assertAlmostEquals(
 		decodeFloat(
-			(next as DecoderEvent<DecoderLike, FloatLiteralEventData>).eventData
+			(next as DecoderEvent<FloatLiteralEventData>).eventData
 				.data,
 		),
 		value,

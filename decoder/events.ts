@@ -79,9 +79,10 @@ export type DecoderEventData =
 	| StartEventData
 	| EndEventData
 	| DataEventData;
+
 export type DecoderEvent<
-	DecoderLikeType extends DecoderLike = DecoderLike,
 	EventData extends DecoderEventData = DecoderEventData,
+	DecoderLikeType extends DecoderLike = DecoderLike,
 > = {
 	eventData: EventData;
 } & DecoderLikeType;
@@ -89,10 +90,10 @@ export type DecoderEvent<
 export function wrapEventData<
 	EventData extends DecoderEventData,
 	Decoder extends DecoderLike = DecoderLike,
->(decoder: Decoder, eventData: EventData): DecoderEvent<Decoder, EventData> {
+>(decoder: Decoder, eventData: EventData): DecoderEvent<EventData, Decoder> {
 	const obj = {
 		eventData,
-	} as DecoderEvent<Decoder, EventData>;
+	} as DecoderEvent<EventData, Decoder>;
 	if (AsyncDecoderSymbol in decoder && decoder[AsyncDecoderSymbol]) {
 		(obj as AsyncDecoderLike)[AsyncDecoderSymbol] =
 			decoder[AsyncDecoderSymbol];
@@ -111,8 +112,8 @@ export function isStartEvent<Filter extends MajorType | undefined = undefined>(
 	event: DecoderEvent,
 	majorType?: Filter,
 ): event is DecoderEvent<
-	DecoderLike,
-	StartEventData & { majorType: MapMajorTypeFilterToMajorType<Filter> }
+	StartEventData & { majorType: MapMajorTypeFilterToMajorType<Filter> },
+	DecoderLike
 > {
 	return event.eventData.eventType === "start" && majorType === undefined ||
 		event.eventData.majorType === majorType;
@@ -123,14 +124,14 @@ export function bindIsStartEvent<
 >(filter: Filter): (
 	event: DecoderEvent,
 ) => event is DecoderEvent<
-	DecoderLike,
-	StartEventData & { majorType: MapMajorTypeFilterToMajorType<Filter> }
+	StartEventData & { majorType: MapMajorTypeFilterToMajorType<Filter> },
+	DecoderLike
 > {
 	return function (
 		event: DecoderEvent,
 	): event is DecoderEvent<
-		DecoderLike,
-		StartEventData & { majorType: MapMajorTypeFilterToMajorType<Filter> }
+		StartEventData & { majorType: MapMajorTypeFilterToMajorType<Filter> },
+		DecoderLike
 	> {
 		return isStartEvent(event, filter);
 	};
@@ -140,8 +141,8 @@ export function isEndEvent<Filter extends MajorType | undefined = undefined>(
 	event: DecoderEvent,
 	majorType?: Filter,
 ): event is DecoderEvent<
-	DecoderLike,
-	EndEventData & { majorType: MapMajorTypeFilterToMajorType<Filter> }
+	EndEventData & { majorType: MapMajorTypeFilterToMajorType<Filter> },
+	DecoderLike
 > {
 	return event.eventData.eventType === "start" && majorType === undefined ||
 		event.eventData.majorType === majorType;
@@ -152,14 +153,14 @@ export function bindIsEndEvent<
 >(filter: Filter): (
 	event: DecoderEvent,
 ) => event is DecoderEvent<
-	DecoderLike,
-	EndEventData & { majorType: MapMajorTypeFilterToMajorType<Filter> }
+	EndEventData & { majorType: MapMajorTypeFilterToMajorType<Filter> },
+	DecoderLike
 > {
 	return function (
 		event: DecoderEvent,
 	): event is DecoderEvent<
-		DecoderLike,
-		EndEventData & { majorType: MapMajorTypeFilterToMajorType<Filter> }
+		EndEventData & { majorType: MapMajorTypeFilterToMajorType<Filter> },
+		DecoderLike
 	> {
 		return isEndEvent(event, filter);
 	};

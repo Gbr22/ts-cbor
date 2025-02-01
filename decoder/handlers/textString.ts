@@ -1,5 +1,4 @@
 import { MajorType, serialize } from "../../common.ts";
-import type { DecoderLike } from "../common.ts";
 import type { DecoderEvent, StartTextStringEventData } from "../events.ts";
 import type {
 	DecoderHandlerInstance,
@@ -7,7 +6,7 @@ import type {
 	DecodingHandler,
 } from "../parse.ts";
 
-type TextStringStartEvent = DecoderEvent<DecoderLike, StartTextStringEventData>;
+type TextStringStartEvent = DecoderEvent<StartTextStringEventData>;
 export const textStringDecodingHandler: DecodingHandler<TextStringStartEvent> =
 	{
 		match(event: DecoderEvent): event is TextStringStartEvent {

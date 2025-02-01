@@ -1,5 +1,4 @@
 import { MajorType, TaggedValue } from "../../common.ts";
-import type { DecoderLike } from "../common.ts";
 import type { DecoderEvent, TagLiteralEventData } from "../events.ts";
 import { decodeUint } from "../numbers.ts";
 import type {
@@ -8,7 +7,7 @@ import type {
 	DecodingHandler,
 } from "../parse.ts";
 
-export type TagEvent = DecoderEvent<DecoderLike, TagLiteralEventData>;
+export type TagEvent = DecoderEvent<TagLiteralEventData>;
 export const taggedValueDecodingHandler: DecodingHandler<TagEvent> =
 	createTaggedValueDecodingHandler(() => true, (data) => data);
 
