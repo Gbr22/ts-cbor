@@ -4,6 +4,7 @@ import {
 	type AsyncDecoderLike,
 	AsyncDecoderSymbol,
 	type DecoderLike,
+	MapDecoderToIterableIterator,
 	Mode,
 	type ReaderState,
 	type SyncDecoderLike,
@@ -11,7 +12,6 @@ import {
 } from "./common.ts";
 import type { DataEventData, DecoderEvent, EndEventData } from "./events.ts";
 import type { IteratorPullResult } from "./iterating.ts";
-import type { MapDecoderToIterator } from "./parse.ts";
 
 const utf8LengthMapping = [
 	//   Expected     Mask         Length
@@ -108,7 +108,7 @@ export function handleTextStringData(state: ReaderState) {
 
 export function consumeTextString<Decoder extends DecoderLike>(
 	decoder: Decoder,
-): MapDecoderToIterator<Decoder, string, void, void> {
+): MapDecoderToIterableIterator<Decoder, string, void, void> {
 	let counter = 1;
 
 	function handleIteration(
@@ -169,7 +169,9 @@ export function consumeTextString<Decoder extends DecoderLike>(
 	}
 
 	if (SyncDecoderSymbol in decoder && decoder[SyncDecoderSymbol]) {
-		return syncImpl(decoder as SyncDecoderLike) as MapDecoderToIterator<
+		return syncImpl(
+			decoder as SyncDecoderLike,
+		) as MapDecoderToIterableIterator<
 			Decoder,
 			string,
 			void,
@@ -177,7 +179,9 @@ export function consumeTextString<Decoder extends DecoderLike>(
 		>;
 	}
 	if (AsyncDecoderSymbol in decoder && decoder[AsyncDecoderSymbol]) {
-		return asyncImpl(decoder as AsyncDecoderLike) as MapDecoderToIterator<
+		return asyncImpl(
+			decoder as AsyncDecoderLike,
+		) as MapDecoderToIterableIterator<
 			Decoder,
 			string,
 			void,

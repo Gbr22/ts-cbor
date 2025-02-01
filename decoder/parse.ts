@@ -3,7 +3,7 @@ import {
 	type AsyncDecoderLike,
 	AsyncDecoderSymbol,
 	type DecoderLike,
-	type MapDecoderToIterableIterator,
+	MapDecoderToIterableIterator,
 	type MapDecoderToReturnType,
 	type SyncDecoder,
 	type SyncDecoderLike,
@@ -208,16 +208,6 @@ export function parseDecoder<Decoder extends DecoderLike>(
 	}
 	throw new Error("Decoder is neither sync nor async");
 }
-
-export type MapDecoderToIterator<
-	Decoder = DecoderLike,
-	Yield = unknown,
-	Return = unknown,
-	Next = unknown,
-> = Decoder extends AsyncDecoderLike
-	? AsyncIterableIterator<Yield, Return, Next>
-	: Decoder extends SyncDecoderLike ? IterableIterator<Yield, Return, Next>
-	: never;
 
 type MapValueToDecoder<Value> = Value extends Uint8Array ? SyncDecoder
 	: Value extends Iterable<Uint8Array> ? SyncDecoder

@@ -19,10 +19,17 @@ export type SyncWriter = {
 
 type AnyWriter = AsyncWriter | SyncWriter;
 
-export type WriterReturnType<Writer, Param = void> = Writer extends AsyncWriter
-	? Promise<Param>
-	: Param;
-export type WriterErrorType<Writer> = WriterReturnType<Writer, never>;
+/**
+ * Maps an AsyncWriter | SyncWriter to a return type. For async writers, `Param` is wrapped in a `Promise`. `Param` is usually void.
+ */
+export type WriterReturnType<Writer extends AnyWriter, Param = void> =
+	Writer extends SyncWriter ? Param
+		: Writer extends AsyncWriter ? Promise<Param>
+		: never;
+export type WriterErrorType<Writer extends AnyWriter> = WriterReturnType<
+	Writer,
+	never
+>;
 
 type SequentialGenerator = () => IterableIterator<void | Promise<void>>;
 export function sequentialWriteGenerator<Writer extends AnyWriter>(
@@ -66,14 +73,19 @@ export function sequentialWriteFunctions<Writer extends AnyWriter>(
 	return undefined as WriterReturnType<Writer>;
 }
 
-type AsyncOrThrowMap<Writer> = Writer extends AsyncWriter ? Promise<void>
+export type MustUseAsyncWriterReturnType<
+	Writer extends AnyWriter,
+	ReturnType = void,
+> = Writer extends SyncWriter ? never
+	: Writer extends AsyncWriter ? Promise<ReturnType>
 	: never;
+
 export function mustUseAsyncWriter<Writer extends AnyWriter>(
 	writer: Writer,
 	fn: () => Promise<void>,
-): AsyncOrThrowMap<Writer> {
+): MustUseAsyncWriterReturnType<Writer> {
 	if (AsyncWriterSymbol in writer && writer[AsyncWriterSymbol]) {
-		return fn() as AsyncOrThrowMap<Writer>;
+		return fn() as MustUseAsyncWriterReturnType<Writer>;
 	}
 	throw new Error("Expected async writer");
 }
@@ -363,14 +375,12 @@ function writeBigIntHelper<Writer extends AnyWriter>(
 	});
 }
 
-export function writeBigNum<Writer extends AnyWriter>(
-	writer: Writer,
-	number: bigint,
-): WriterReturnType<Writer> {
-	const { type, value } = getNumberWrittenValueAndType(number);
-	return writeBigIntHelper(writer, type + 2, value as bigint);
-}
-
+/**
+ * Serialize a JavaScript integer to a CBOR integer.
+ * This function can handle number and bigint values in the range: -(2^64) <= n and n >= (2^64)-1.
+ * The behaviour for values outside this range is not defined.
+ * To serialize a number outside this range, use `createBigNum` to turn a BigInt into a TaggedValue, which can be used in the `writeValue` function with the default handlers.
+ */
 export function writeInt<Writer extends AnyWriter>(
 	writer: Writer,
 	number: number | bigint,
@@ -472,12 +482,13 @@ export function writeMapHeader<Writer extends AnyWriter>(
 export function writeMap<Writer extends AnyWriter>(
 	writer: Writer,
 	value: Map<unknown, unknown>,
+	encodingHandlers: EncodingHandler[] = defaultEncodingHandlers,
 ): WriterReturnType<Writer> {
 	return sequentialWriteGenerator(writer, function* () {
 		yield writeMapHeader(writer, value.size);
 		for (const [key, item] of value) {
-			yield writeValue(writer, key);
-			yield writeValue(writer, item);
+			yield writeValue(writer, key, encodingHandlers);
+			yield writeValue(writer, item, encodingHandlers);
 		}
 	});
 }
@@ -485,11 +496,12 @@ export function writeMap<Writer extends AnyWriter>(
 export function writeArray<Writer extends AnyWriter>(
 	writer: Writer,
 	value: unknown[] | Array<unknown>,
+	encodingHandlers: EncodingHandler[] = defaultEncodingHandlers,
 ): WriterReturnType<Writer> {
 	return sequentialWriteGenerator(writer, function* () {
 		yield writeArrayHeader(writer, value.length);
-		for (const e of value) {
-			yield writeValue(writer, e);
+		for (const element of value) {
+			yield writeValue(writer, element, encodingHandlers);
 		}
 	});
 }
@@ -497,13 +509,14 @@ export function writeArray<Writer extends AnyWriter>(
 export function writeObject<Writer extends AnyWriter>(
 	writer: Writer,
 	value: object,
+	encodingHandlers: EncodingHandler[] = defaultEncodingHandlers,
 ): WriterReturnType<Writer> {
 	return sequentialWriteGenerator(writer, function* () {
 		const entries = Object.entries(value);
 		yield writeMapHeader(writer, entries.length);
 		for (const [key, item] of entries) {
-			yield writeValue(writer, key);
-			yield writeValue(writer, item);
+			yield writeValue(writer, key, encodingHandlers);
+			yield writeValue(writer, item, encodingHandlers);
 		}
 	});
 }
@@ -511,11 +524,12 @@ export function writeObject<Writer extends AnyWriter>(
 export function writeSyncIterable<Writer extends AnyWriter>(
 	writer: Writer,
 	value: Iterable<unknown>,
+	encodingHandlers: EncodingHandler[] = defaultEncodingHandlers,
 ): WriterReturnType<Writer> {
 	return sequentialWriteGenerator(writer, function* () {
 		yield writeArrayHeader(writer);
-		for (const e of value as Iterable<unknown>) {
-			yield writeValue(writer, e);
+		for (const element of value as Iterable<unknown>) {
+			yield writeValue(writer, element, encodingHandlers);
 		}
 		yield writeBreak(writer);
 	});
@@ -524,11 +538,12 @@ export function writeSyncIterable<Writer extends AnyWriter>(
 export function writeAsyncIterable<Writer extends AnyWriter>(
 	writer: Writer,
 	value: AsyncIterable<unknown>,
+	encodingHandlers: EncodingHandler[] = defaultEncodingHandlers,
 ): WriterReturnType<Writer> {
 	return mustUseAsyncWriter(writer, async () => {
 		await writeArrayHeader(writer);
-		for await (const e of value as AsyncIterable<unknown>) {
-			await writeValue(writer, e);
+		for await (const element of value as AsyncIterable<unknown>) {
+			await writeValue(writer, element, encodingHandlers);
 		}
 		await writeBreak(writer);
 	});
@@ -537,24 +552,40 @@ export function writeAsyncIterable<Writer extends AnyWriter>(
 export function writeIterable<Writer extends AnyWriter>(
 	writer: Writer,
 	value: Iterable<unknown> | AsyncIterable<unknown>,
+	encodingHandlers: EncodingHandler[] = defaultEncodingHandlers,
 ): WriterReturnType<Writer> {
 	if (value && typeof value === "object" && Symbol.iterator in value) {
-		return writeSyncIterable(writer, value);
+		return writeSyncIterable(writer, value, encodingHandlers);
 	}
 	if (value && typeof value === "object" && Symbol.asyncIterator in value) {
-		return writeAsyncIterable(writer, value);
+		return writeAsyncIterable(writer, value, encodingHandlers);
 	}
 	throw new Error("Value is not iterable or async iterable");
 }
-
+export type WriteFunction<T = unknown> = <Writer extends AnyWriter>(
+	writer: Writer,
+	value: T,
+	encodingHandlers?: EncodingHandler[],
+) => WriterReturnType<Writer>;
 export type EncodingHandler<T = unknown> = {
 	match(value: unknown): value is T;
 	write?<Writer extends AnyWriter>(
 		writer: Writer,
 		value: T,
+		encodingHandlers?: EncodingHandler[],
 	): WriterReturnType<Writer>;
 	replace?(value: T): unknown;
 };
+
+type AssertExtends<T extends U, U> = T;
+type _AssertWriteFunctionEquality1 = AssertExtends<
+	NonNullable<EncodingHandler["write"]>,
+	WriteFunction
+>;
+type _AssertWriteFunctionEquality2 = AssertExtends<
+	WriteFunction,
+	NonNullable<EncodingHandler["write"]>
+>;
 
 export function writeValue<Writer extends AnyWriter>(
 	writer: Writer,

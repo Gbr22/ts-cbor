@@ -103,3 +103,54 @@ export function wrapEventData<
 	}
 	return obj;
 }
+
+type MapMajorTypeFilterToMajorType<Filter extends MajorType | undefined> =
+	Filter extends MajorType ? Filter
+		: MajorType;
+export function isStartEvent<Filter extends MajorType | undefined = undefined>(
+	event: DecoderEvent,
+	majorType?: Filter,
+): event is DecoderEvent<
+	DecoderLike,
+	StartEventData & { majorType: MapMajorTypeFilterToMajorType<Filter> }
+> {
+	return event.eventData.eventType === "start" && majorType === undefined ||
+		event.eventData.majorType === majorType;
+}
+
+export function bindIsStartEvent<
+	Filter extends MajorType | undefined = undefined,
+>(filter: Filter) {
+	return function (
+		event: DecoderEvent,
+	): event is DecoderEvent<
+		DecoderLike,
+		StartEventData & { majorType: MapMajorTypeFilterToMajorType<Filter> }
+	> {
+		return isStartEvent(event, filter);
+	};
+}
+
+export function isEndEvent<Filter extends MajorType | undefined = undefined>(
+	event: DecoderEvent,
+	majorType?: Filter,
+): event is DecoderEvent<
+	DecoderLike,
+	EndEventData & { majorType: MapMajorTypeFilterToMajorType<Filter> }
+> {
+	return event.eventData.eventType === "start" && majorType === undefined ||
+		event.eventData.majorType === majorType;
+}
+
+export function bindIsEndEvent<
+	Filter extends MajorType | undefined = undefined,
+>(filter: Filter) {
+	return function (
+		event: DecoderEvent,
+	): event is DecoderEvent<
+		DecoderLike,
+		EndEventData & { majorType: MapMajorTypeFilterToMajorType<Filter> }
+	> {
+		return isEndEvent(event, filter);
+	};
+}

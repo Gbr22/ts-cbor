@@ -1,3 +1,4 @@
+export { createTaggedValueDecodingHandler } from "./decoder/handlers/taggedValue.ts";
 export { createMapDecodingHandler } from "./decoder/handlers/map.ts";
 export {
 	arrayDecodingHandler,
@@ -50,6 +51,7 @@ export {
 	intoAsyncWriter,
 	intoSyncWriter,
 	mustUseAsyncWriter,
+	type MustUseAsyncWriterReturnType,
 	sequentialWriteFunctions,
 	sequentialWriteGenerator,
 	type SyncWriter,
@@ -70,6 +72,7 @@ export {
 	writeFloat16,
 	writeFloat32,
 	writeFloat64,
+	type WriteFunction,
 	writeHeader,
 	writeInt,
 	writeInt16,
@@ -92,7 +95,11 @@ export {
 	writeUndefined,
 	writeValue,
 } from "./encoder.ts";
-export { decodeValue, parseDecoder } from "./decoder/parse.ts";
+export {
+	decodeValue,
+	type DecodingHandler,
+	parseDecoder,
+} from "./decoder/parse.ts";
 export { consumeByteString } from "./decoder/byte-string.ts";
 export { consumeTextString } from "./decoder/text-string.ts";
 export {
@@ -111,12 +118,16 @@ export {
 	SyncDecoderSymbol,
 } from "./decoder/common.ts";
 export {
+	bindIsEndEvent,
+	bindIsStartEvent,
 	type DataEventData,
 	type DecoderEvent,
 	type DecoderEventData,
 	type EndEventData,
 	type FloatLiteralEventData,
 	type IntegerLiteralEventData,
+	isEndEvent,
+	isStartEvent,
 	type LiteralEventData,
 	type NumberEventData,
 	type SimpleValueLiteralEventData,

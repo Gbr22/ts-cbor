@@ -35,9 +35,14 @@ export interface SyncDecoder {
 }
 export type Decoder = AsyncDecoder | SyncDecoder;
 
-export type MapDecoderToIterableIterator<D, A, B, C> = D extends SyncDecoderLike
-	? IterableIterator<A, B, C>
-	: D extends AsyncDecoderLike ? AsyncIterableIterator<A, B, C>
+export type MapDecoderToIterableIterator<
+	Decoder = DecoderLike,
+	Yield = unknown,
+	Return = unknown,
+	Next = unknown,
+> = Decoder extends AsyncDecoderLike
+	? AsyncIterableIterator<Yield, Return, Next>
+	: Decoder extends SyncDecoderLike ? IterableIterator<Yield, Return, Next>
 	: never;
 
 export type MapIterableToDecoder<I extends AnyIterable<Uint8Array>> = I extends
