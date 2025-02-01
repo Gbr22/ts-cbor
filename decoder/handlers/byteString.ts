@@ -1,6 +1,11 @@
 import { MajorTypes, serialize } from "../../common.ts";
 import { concatBytes } from "../../utils.ts";
-import type { DecoderEvent, StartByteStringEventData } from "../events.ts";
+import {
+	bindIsStartEvent,
+	type DecoderEvent,
+	DecoderEventTypes,
+	type StartByteStringEventData,
+} from "../events.ts";
 import type {
 	DecoderHandlerInstance,
 	DecodingControl,
@@ -10,10 +15,7 @@ import type {
 type ByteStringStartEvent = DecoderEvent<StartByteStringEventData>;
 export const byteStringDecodingHandler: DecodingHandler<ByteStringStartEvent> =
 	{
-		match(event: DecoderEvent): event is ByteStringStartEvent {
-			return event.eventData.eventType === "start" &&
-				event.eventData.majorType === MajorTypes.ByteString;
-		},
+		match: bindIsStartEvent(MajorTypes.ByteString),
 		handle(control: DecodingControl): DecoderHandlerInstance {
 			const values: Uint8Array[] = [];
 			let counter = 1;
@@ -24,17 +26,17 @@ export const byteStringDecodingHandler: DecodingHandler<ByteStringStartEvent> =
 							`Unexpected major type ${event.eventData.majorType} while reading byte string`,
 						);
 					}
-					if (event.eventData.eventType === "start") {
+					if (event.eventData.eventType === DecoderEventTypes.Start) {
 						counter++;
 					}
-					if (event.eventData.eventType === "end") {
+					if (event.eventData.eventType === DecoderEventTypes.End) {
 						counter--;
 					}
 					if (counter === 0) {
 						control.pop();
 						control.yield(concatBytes(...values));
 					}
-					if (event.eventData.eventType === "data") {
+					if (event.eventData.eventType === DecoderEventTypes.Data) {
 						values.push(event.eventData.data);
 					}
 					control.continue();

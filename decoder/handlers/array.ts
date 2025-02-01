@@ -2,6 +2,7 @@ import { MajorTypes } from "../../common.ts";
 import {
 	bindIsStartEvent,
 	type DecoderEvent,
+	DecoderEventTypes,
 	type StartArrayEventData,
 } from "../events.ts";
 import type {
@@ -17,7 +18,7 @@ export const arrayDecodingHandler: DecodingHandler<ArrayStartEvent> = {
 		const values: unknown[] = [];
 		return {
 			onEvent(event) {
-				if (event.eventData.eventType === "end") {
+				if (event.eventData.eventType === DecoderEventTypes.End) {
 					control.pop();
 					control.yield(values);
 				}

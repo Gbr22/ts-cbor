@@ -4,8 +4,10 @@ import {
 	decodeFloat,
 	decodeNumberEvent,
 	type DecoderEvent,
+	DecoderEventSubTypes,
+	DecoderEventTypes,
 	decoderFromStream,
-	type FloatLiteralEventData,
+	type FloatEventData,
 	writeFloat16,
 	writeFloat32,
 	writeFloat64,
@@ -32,21 +34,25 @@ async function floatTest(
 	const writeResult = await getBytes();
 	const decoder = decoderFromStream(bytesToStream(writeResult));
 	const next = await assertNext(decoder.events());
-	assertEquals(next.eventData.eventType, "literal", "Expect literal event");
+	assertEquals(
+		next.eventData.eventType,
+		DecoderEventTypes.Literal,
+		"Expect literal event",
+	);
 	assertEquals(
 		next.eventData.majorType,
 		MajorTypes.SimpleValue,
 		"Expect SimpleValue major type",
 	);
 	assertEquals(
-		(next as DecoderEvent<FloatLiteralEventData>).eventData
-			.simpleValueType,
-		"float",
+		(next as DecoderEvent<FloatEventData>).eventData
+			.subType,
+		DecoderEventSubTypes.Float,
 		"Expect simple value type",
 	);
 	assertAlmostEquals(
 		decodeFloat(
-			(next as DecoderEvent<FloatLiteralEventData>).eventData
+			(next as DecoderEvent<FloatEventData>).eventData
 				.data,
 		),
 		value,

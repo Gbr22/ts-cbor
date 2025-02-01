@@ -1,11 +1,13 @@
 import { AdditionalInfo, isIntegerMajorType, MajorTypes } from "../common.ts";
 import { Mode, type ReaderState } from "./common.ts";
-import type {
-	FloatLiteralEventData,
-	IntegerLiteralEventData,
-	SimpleValueLiteralEventData,
-	StartEventData,
-	TagLiteralEventData,
+import {
+	DecoderEventSubTypes,
+	DecoderEventTypes,
+	type FloatEventData,
+	type IntegerEventData,
+	type SimpleValueEventData,
+	type StartEventData,
+	type TagEventData,
 } from "./events.ts";
 import { decodeUint } from "./numbers.ts";
 
@@ -22,19 +24,19 @@ export function flushHeaderAndArgument(state: ReaderState) {
 			}
 			state.yieldEndOfDataItem(
 				{
-					eventType: "literal",
+					eventType: DecoderEventTypes.Tag,
 					majorType: MajorTypes.Tag,
 					data: array,
-				} satisfies TagLiteralEventData,
+				} satisfies TagEventData,
 			);
 		}
 		state.yieldEndOfDataItem(
 			{
-				eventType: "literal",
+				eventType: DecoderEventTypes.Literal,
 				majorType: state
-					.majorType as IntegerLiteralEventData["majorType"],
+					.majorType as IntegerEventData["majorType"],
 				data: array,
-			} satisfies IntegerLiteralEventData,
+			} satisfies IntegerEventData,
 		);
 	}
 	if (state.majorType == MajorTypes.SimpleValue) {
@@ -45,11 +47,11 @@ export function flushHeaderAndArgument(state: ReaderState) {
 		) {
 			state.yieldEndOfDataItem(
 				{
-					eventType: "literal",
-					simpleValueType: "float",
+					eventType: DecoderEventTypes.Literal,
+					subType: DecoderEventSubTypes.Float,
 					majorType: MajorTypes.SimpleValue,
 					data: state.argumentBytes,
-				} satisfies FloatLiteralEventData,
+				} satisfies FloatEventData,
 			);
 		}
 		if (state.argumentBytes.length > 0) {
@@ -62,11 +64,11 @@ export function flushHeaderAndArgument(state: ReaderState) {
 
 		state.yieldEndOfDataItem(
 			{
-				eventType: "literal",
+				eventType: DecoderEventTypes.Literal,
 				majorType: MajorTypes.SimpleValue,
-				simpleValueType: "simple",
+				subType: DecoderEventSubTypes.SimpleValue,
 				data: numberValue,
-			} satisfies SimpleValueLiteralEventData,
+			} satisfies SimpleValueEventData,
 		);
 	}
 	if (state.majorType == MajorTypes.ByteString) {
@@ -82,7 +84,7 @@ export function flushHeaderAndArgument(state: ReaderState) {
 		}
 		state.yieldEventData(
 			{
-				eventType: "start",
+				eventType: DecoderEventTypes.Start,
 				length: state.byteArrayNumberOfBytesToRead,
 				majorType: MajorTypes.ByteString,
 			} satisfies StartEventData,
@@ -102,7 +104,7 @@ export function flushHeaderAndArgument(state: ReaderState) {
 		}
 		state.yieldEventData(
 			{
-				eventType: "start",
+				eventType: DecoderEventTypes.Start,
 				length: state.byteArrayNumberOfBytesToRead,
 				majorType: MajorTypes.TextString,
 			} satisfies StartEventData,
@@ -117,7 +119,7 @@ export function flushHeaderAndArgument(state: ReaderState) {
 		state.hierarchy.push(MajorTypes.Array);
 		state.yieldEventData(
 			{
-				eventType: "start",
+				eventType: DecoderEventTypes.Start,
 				length: state.numberValue,
 				majorType: MajorTypes.Array,
 			} satisfies StartEventData,
@@ -135,7 +137,7 @@ export function flushHeaderAndArgument(state: ReaderState) {
 		state.hierarchy.push(MajorTypes.Map);
 		state.yieldEventData(
 			{
-				eventType: "start",
+				eventType: DecoderEventTypes.Start,
 				length: state.numberValue,
 				majorType: MajorTypes.Map,
 			} satisfies StartEventData,

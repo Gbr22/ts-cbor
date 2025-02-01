@@ -10,7 +10,12 @@ import {
 	type SyncDecoderLike,
 	SyncDecoderSymbol,
 } from "./common.ts";
-import type { DataEventData, DecoderEvent, EndEventData } from "./events.ts";
+import {
+	type DataEventData,
+	type DecoderEvent,
+	DecoderEventTypes,
+	type EndEventData,
+} from "./events.ts";
 import type { IteratorPullResult } from "./iterating.ts";
 
 export function handleByteStringData(state: ReaderState) {
@@ -18,7 +23,7 @@ export function handleByteStringData(state: ReaderState) {
 		state.mode = Mode.ExpectingDataItem;
 		state.yieldEndOfDataItem(
 			{
-				eventType: "end",
+				eventType: DecoderEventTypes.End,
 				majorType: MajorTypes.ByteString,
 			} satisfies EndEventData,
 		);
@@ -35,7 +40,7 @@ export function handleByteStringData(state: ReaderState) {
 	if (slice.length > 0) {
 		state.yieldEventData(
 			{
-				eventType: "data",
+				eventType: DecoderEventTypes.Data,
 				majorType: MajorTypes.ByteString,
 				data: slice,
 			} satisfies DataEventData,
@@ -68,16 +73,16 @@ export function consumeByteString<Decoder extends DecoderLike>(
 				`Unexpected major type ${value.eventData.majorType} while reading byte string`,
 			);
 		}
-		if (value.eventData.eventType === "start") {
+		if (value.eventData.eventType === DecoderEventTypes.Start) {
 			counter++;
 		}
-		if (value.eventData.eventType === "end") {
+		if (value.eventData.eventType === DecoderEventTypes.End) {
 			counter--;
 		}
 		if (counter === 0) {
 			IterationControl.return();
 		}
-		if (value.eventData.eventType === "data") {
+		if (value.eventData.eventType === DecoderEventTypes.Data) {
 			IterationControl.yield(value.eventData.data);
 		}
 	}

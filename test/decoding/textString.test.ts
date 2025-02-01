@@ -1,5 +1,9 @@
 import { assertEquals } from "@std/assert/equals";
-import { consumeTextString, decoderFromStream } from "../../mod.ts";
+import {
+	consumeTextString,
+	DecoderEventTypes,
+	decoderFromStream,
+} from "../../mod.ts";
 import { assertNext } from "../../test_utils.ts";
 import { collect, iterableToStream } from "../../utils.ts";
 
@@ -14,7 +18,11 @@ Deno.test(async function decodeUnicodeCodepointInMultipleChunksTest() {
 	const stream: ReadableStream<Uint8Array> = iterableToStream(chunks);
 	const decoder = decoderFromStream(stream);
 	const event = await assertNext(decoder.events());
-	assertEquals(event.eventData.eventType, "start", "Expect start event");
+	assertEquals(
+		event.eventData.eventType,
+		DecoderEventTypes.Start,
+		"Expect start event",
+	);
 	const parts = await collect(consumeTextString(event));
 	const resultText = parts.join("");
 	assertEquals(resultText, expectedText, "Expect correct text");

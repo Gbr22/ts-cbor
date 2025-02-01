@@ -1,6 +1,10 @@
 import { MajorTypes } from "../common.ts";
 import type { DecoderEvent } from "../mod.ts";
-import type { SimpleValueLiteralEventData } from "./events.ts";
+import {
+	DecoderEventSubTypes,
+	DecoderEventTypes,
+	type SimpleValueEventData,
+} from "./events.ts";
 
 export const UnknownSimpleValue = Symbol("UnknownSimpleValue");
 export type UnknownSimpleValue = typeof UnknownSimpleValue;
@@ -25,10 +29,10 @@ export function decodeSimpleValue(
 
 export function isSimpleValueEvent<Event extends DecoderEvent>(
 	event: Event,
-): event is Event & DecoderEvent<SimpleValueLiteralEventData> {
-	return event.eventData.eventType === "literal" &&
+): event is Event & DecoderEvent<SimpleValueEventData> {
+	return event.eventData.eventType === DecoderEventTypes.Literal &&
 		event.eventData.majorType === MajorTypes.SimpleValue &&
-		event.eventData.simpleValueType === "simple";
+		event.eventData.subType === DecoderEventSubTypes.SimpleValue;
 }
 
 export class SimpleValue {

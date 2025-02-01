@@ -1,6 +1,13 @@
 import { isIntegerMajorType, MajorTypes } from "../common.ts";
 import type { DecoderLike } from "./common.ts";
-import type { DecoderEvent, NumberEventData } from "./events.ts";
+import {
+	type DecoderEvent,
+	DecoderEventSubTypes,
+	DecoderEventTypes,
+	type FloatEventData,
+	type IntegerEventData,
+	type NumberEventData,
+} from "./events.ts";
 
 export function decodeUint(array: Uint8Array): number | bigint {
 	if (array.length == 8) {
@@ -35,27 +42,30 @@ export function decodeFloat(array: Uint8Array): number {
 	);
 }
 
-export function isNumberEvent<Event extends DecoderEvent>(
-	event: Event,
-): event is Event & DecoderEvent<NumberEventData, DecoderLike> {
-	if (event.eventData.eventType != "literal") {
-		return false;
-	}
-	const isInt = event.eventData.majorType === MajorTypes.UnsignedInteger ||
+export function isIntegerEvent(
+	event: DecoderEvent,
+): event is Event & DecoderEvent<IntegerEventData, DecoderLike> {
+	return event.eventData.eventType === DecoderEventTypes.Literal &&
+			event.eventData.majorType === MajorTypes.UnsignedInteger ||
 		event.eventData.majorType === MajorTypes.NegativeInteger;
-	if (isInt) {
-		return true;
-	}
-	const isFloat = event.eventData.majorType === MajorTypes.SimpleValue &&
-		event.eventData.data instanceof Uint8Array;
-	if (isFloat) {
-		return true;
-	}
-	return false;
+}
+
+export function isFloatEvent(
+	event: DecoderEvent,
+): event is Event & DecoderEvent<FloatEventData, DecoderLike> {
+	return event.eventData.eventType === DecoderEventTypes.Literal &&
+		event.eventData.majorType === MajorTypes.SimpleValue &&
+		event.eventData.subType === DecoderEventSubTypes.Float;
+}
+
+export function isNumberEvent(
+	event: DecoderEvent,
+): event is Event & DecoderEvent<NumberEventData, DecoderLike> {
+	return isIntegerEvent(event) || isFloatEvent(event);
 }
 
 export function decodeNumberEvent(event: DecoderEvent): number | bigint {
-	if (event.eventData.eventType === "literal") {
+	if (event.eventData.eventType === DecoderEventTypes.Literal) {
 		if (isIntegerMajorType(event.eventData.majorType)) {
 			let number = decodeUint(event.eventData.data as Uint8Array);
 			if (event.eventData.majorType == MajorTypes.NegativeInteger) {

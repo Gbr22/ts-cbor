@@ -1,5 +1,10 @@
 import { MajorTypes, serialize } from "../../common.ts";
-import type { DecoderEvent, StartTextStringEventData } from "../events.ts";
+import {
+	bindIsStartEvent,
+	type DecoderEvent,
+	DecoderEventTypes,
+	type StartTextStringEventData,
+} from "../events.ts";
 import type {
 	DecoderHandlerInstance,
 	DecodingControl,
@@ -9,10 +14,7 @@ import type {
 type TextStringStartEvent = DecoderEvent<StartTextStringEventData>;
 export const textStringDecodingHandler: DecodingHandler<TextStringStartEvent> =
 	{
-		match(event: DecoderEvent): event is TextStringStartEvent {
-			return event.eventData.eventType === "start" &&
-				event.eventData.majorType === MajorTypes.TextString;
-		},
+		match: bindIsStartEvent(MajorTypes.TextString),
 		handle(control: DecodingControl): DecoderHandlerInstance {
 			const values: string[] = [];
 			let counter = 1;
@@ -23,17 +25,17 @@ export const textStringDecodingHandler: DecodingHandler<TextStringStartEvent> =
 							`Unexpected major type ${event.eventData.majorType} while reading text string`,
 						);
 					}
-					if (event.eventData.eventType === "start") {
+					if (event.eventData.eventType === DecoderEventTypes.Start) {
 						counter++;
 					}
-					if (event.eventData.eventType === "end") {
+					if (event.eventData.eventType === DecoderEventTypes.End) {
 						counter--;
 					}
 					if (counter === 0) {
 						control.pop();
 						control.yield(values.join(""));
 					}
-					if (event.eventData.eventType === "data") {
+					if (event.eventData.eventType === DecoderEventTypes.Data) {
 						values.push(event.eventData.data);
 					}
 					control.continue();

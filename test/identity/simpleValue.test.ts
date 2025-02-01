@@ -2,9 +2,11 @@ import { assertEquals } from "@std/assert/equals";
 import type {
 	DecoderEvent,
 	DecoderLike,
-	SimpleValueLiteralEventData,
+	SimpleValueEventData,
 } from "../../mod.ts";
 import {
+	DecoderEventSubTypes,
+	DecoderEventTypes,
 	decoderFromStream,
 	intoAsyncWriter,
 	SimpleValue,
@@ -34,7 +36,7 @@ Deno.test(async function simpleValueNumericIdentityTest() {
 		const next = await assertNext(decoder.events());
 		assertEquals(
 			next.eventData.eventType,
-			"literal",
+			DecoderEventTypes.Literal,
 			"Expect literal event",
 		);
 		assertEquals(
@@ -43,14 +45,14 @@ Deno.test(async function simpleValueNumericIdentityTest() {
 			"Expect SimpleValue major type",
 		);
 		assertEquals(
-			(next as DecoderEvent<SimpleValueLiteralEventData, DecoderLike>)
+			(next as DecoderEvent<SimpleValueEventData, DecoderLike>)
 				.eventData
-				.simpleValueType,
-			"simple",
+				.subType,
+			DecoderEventSubTypes.SimpleValue,
 			"Expect simple value type",
 		);
 		assertEquals(
-			(next as DecoderEvent<SimpleValueLiteralEventData, DecoderLike>)
+			(next as DecoderEvent<SimpleValueEventData, DecoderLike>)
 				.eventData
 				.data,
 			simpleValue,

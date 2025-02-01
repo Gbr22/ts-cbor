@@ -1,6 +1,7 @@
 import { assertEquals } from "@std/assert/equals";
 import {
 	consumeTextString,
+	DecoderEventTypes,
 	decoderFromStream,
 	writeTextStream,
 } from "../../mod.ts";
@@ -30,7 +31,11 @@ Deno.test(async function textStringStreamIdentityTest() {
 	const writeResult = await getBytes();
 	const decoder = decoderFromStream(bytesToStream(writeResult));
 	const event = await assertNext(decoder.events());
-	assertEquals(event.eventData.eventType, "start", "Expect start event");
+	assertEquals(
+		event.eventData.eventType,
+		DecoderEventTypes.Start,
+		"Expect start event",
+	);
 	const readResult = (await collect(consumeTextString(event))).join("");
 
 	assertEquals(readResult, chunks.join(""), "Expect correct bytes");

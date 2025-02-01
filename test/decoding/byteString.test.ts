@@ -1,5 +1,10 @@
 import { assertEquals } from "@std/assert/equals";
-import { consumeByteString, decoderFromStream, MajorTypes } from "../../mod.ts";
+import {
+	consumeByteString,
+	DecoderEventTypes,
+	decoderFromStream,
+	MajorTypes,
+} from "../../mod.ts";
 import { assertNext, b, bytesToStream, concat } from "../../test_utils.ts";
 import { collectBytes } from "../../utils.ts";
 
@@ -10,7 +15,11 @@ Deno.test(async function decodeByteStringTest() {
 	);
 	const iterator = decoder.events();
 	const event = await assertNext(iterator);
-	assertEquals(event.eventData.eventType, "start", "Expect start event");
+	assertEquals(
+		event.eventData.eventType,
+		DecoderEventTypes.Start,
+		"Expect start event",
+	);
 	assertEquals(
 		event.eventData.majorType,
 		MajorTypes.ByteString,

@@ -1,33 +1,63 @@
-import type { MajorType, MajorTypes } from "../common.ts";
+import { type MajorType, MajorTypes } from "../common.ts";
 import type { DecoderLike, SyncDecoderLike } from "./common.ts";
 import { SyncDecoderSymbol } from "./common.ts";
 import type { AsyncDecoderLike } from "./common.ts";
 import { AsyncDecoderSymbol } from "./common.ts";
 
+export type DecoderEventTypes = Readonly<{
+	Literal: 1;
+	Tag: 2;
+	Start: 3;
+	End: 4;
+	Data: 5;
+}>;
+
+export const DecoderEventTypes: DecoderEventTypes = Object.freeze({
+	Literal: 1,
+	Tag: 2,
+	Start: 3,
+	End: 4,
+	Data: 5,
+});
+
+export type DecoderEventType = DecoderEventTypes[keyof DecoderEventTypes];
+
+export type DecoderEventSubTypes = Readonly<{
+	SimpleValue: 1;
+	Float: 2;
+}>;
+
+export const DecoderEventSubTypes: DecoderEventSubTypes = Object.freeze({
+	SimpleValue: 1,
+	Float: 2,
+});
+
+export type DecoderEventSubType =
+	DecoderEventSubTypes[keyof DecoderEventSubTypes];
+
 export type LiteralEventData =
-	| IntegerLiteralEventData
-	| SimpleValueLiteralEventData
-	| FloatLiteralEventData
-	| TagLiteralEventData;
-export type TagLiteralEventData = {
-	eventType: "literal";
+	| IntegerEventData
+	| SimpleValueEventData
+	| FloatEventData;
+export type TagEventData = {
+	eventType: DecoderEventTypes["Tag"];
 	majorType: MajorTypes["Tag"];
 	data: Uint8Array;
 };
-export type SimpleValueLiteralEventData = {
-	eventType: "literal";
+export type SimpleValueEventData = {
+	eventType: DecoderEventTypes["Literal"];
 	majorType: MajorTypes["SimpleValue"];
-	simpleValueType: "simple";
+	subType: DecoderEventSubTypes["SimpleValue"];
 	data: number;
 };
-export type FloatLiteralEventData = {
-	eventType: "literal";
+export type FloatEventData = {
+	eventType: DecoderEventTypes["Literal"];
 	majorType: MajorTypes["SimpleValue"];
-	simpleValueType: "float";
+	subType: DecoderEventSubTypes["Float"];
 	data: Uint8Array;
 };
-export type IntegerLiteralEventData = {
-	eventType: "literal";
+export type IntegerEventData = {
+	eventType: DecoderEventTypes["Literal"];
 	majorType:
 		| MajorTypes["NegativeInteger"]
 		| MajorTypes["UnsignedInteger"]
@@ -35,7 +65,7 @@ export type IntegerLiteralEventData = {
 	data: Uint8Array;
 };
 export type StartEventData = {
-	eventType: "start";
+	eventType: DecoderEventTypes["Start"];
 	length: number | bigint | undefined;
 	majorType:
 		| MajorTypes["ByteString"]
@@ -56,7 +86,7 @@ export type StartTextStringEventData = StartEventData & {
 	majorType: MajorTypes["TextString"];
 };
 export type EndEventData = {
-	eventType: "end";
+	eventType: DecoderEventTypes["End"];
 	majorType:
 		| MajorTypes["ByteString"]
 		| MajorTypes["TextString"]
@@ -64,21 +94,22 @@ export type EndEventData = {
 		| MajorTypes["Map"];
 };
 export type DataEventData = {
-	eventType: "data";
+	eventType: DecoderEventTypes["Data"];
 	majorType: MajorTypes["ByteString"];
 	data: Uint8Array;
 } | {
-	eventType: "data";
+	eventType: DecoderEventTypes["Data"];
 	majorType: MajorTypes["TextString"];
 	data: string;
 };
 
-export type NumberEventData = IntegerLiteralEventData | FloatLiteralEventData;
+export type NumberEventData = IntegerEventData | FloatEventData;
 export type DecoderEventData =
 	| LiteralEventData
 	| StartEventData
 	| EndEventData
-	| DataEventData;
+	| DataEventData
+	| TagEventData;
 
 export type DecoderEvent<
 	EventData extends DecoderEventData = DecoderEventData,
@@ -115,7 +146,8 @@ export function isStartEvent<Filter extends MajorType | undefined = undefined>(
 	StartEventData & { majorType: MapMajorTypeFilterToMajorType<Filter> },
 	DecoderLike
 > {
-	return event.eventData.eventType === "start" && majorType === undefined ||
+	return event.eventData.eventType === DecoderEventTypes.Start &&
+			majorType === undefined ||
 		event.eventData.majorType === majorType;
 }
 
@@ -144,7 +176,8 @@ export function isEndEvent<Filter extends MajorType | undefined = undefined>(
 	EndEventData & { majorType: MapMajorTypeFilterToMajorType<Filter> },
 	DecoderLike
 > {
-	return event.eventData.eventType === "start" && majorType === undefined ||
+	return event.eventData.eventType === DecoderEventTypes.End &&
+			majorType === undefined ||
 		event.eventData.majorType === majorType;
 }
 
@@ -164,4 +197,14 @@ export function bindIsEndEvent<
 	> {
 		return isEndEvent(event, filter);
 	};
+}
+
+export function isTagEvent(
+	event: DecoderEvent,
+): event is DecoderEvent<
+	TagEventData,
+	DecoderLike
+> {
+	return event.eventData.eventType === DecoderEventTypes.Tag &&
+		event.eventData.majorType === MajorTypes.Tag;
 }

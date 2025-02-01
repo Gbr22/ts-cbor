@@ -1,5 +1,10 @@
 import { MajorTypes } from "../../common.ts";
-import type { DecoderEvent, StartMapEventData } from "../events.ts";
+import {
+	bindIsStartEvent,
+	type DecoderEvent,
+	DecoderEventTypes,
+	type StartMapEventData,
+} from "../events.ts";
 import type {
 	DecoderHandlerInstance,
 	DecodingControl,
@@ -14,17 +19,14 @@ export function createMapDecodingHandler(
 	mapper: (entires: MapData) => unknown,
 ): DecodingHandler<MapStartEvent> {
 	const handler = {
-		match(event: DecoderEvent): event is MapStartEvent {
-			return event.eventData.eventType === "start" &&
-				event.eventData.majorType === MajorTypes.Map;
-		},
+		match: bindIsStartEvent(MajorTypes.Map),
 		handle(control: DecodingControl): DecoderHandlerInstance {
 			const map: MapData = [];
 			let hasKey = false;
 			let key: unknown | undefined = undefined;
 			return {
 				onEvent(event) {
-					if (event.eventData.eventType === "end") {
+					if (event.eventData.eventType === DecoderEventTypes.End) {
 						control.pop();
 						if (hasKey) {
 							throw new Error(

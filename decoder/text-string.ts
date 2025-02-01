@@ -10,7 +10,12 @@ import {
 	type SyncDecoderLike,
 	SyncDecoderSymbol,
 } from "./common.ts";
-import type { DataEventData, DecoderEvent, EndEventData } from "./events.ts";
+import {
+	type DataEventData,
+	type DecoderEvent,
+	DecoderEventTypes,
+	type EndEventData,
+} from "./events.ts";
 import type { IteratorPullResult } from "./iterating.ts";
 
 const utf8LengthMapping = [
@@ -36,7 +41,7 @@ export function handleTextStringData(state: ReaderState) {
 		}
 		state.yieldEndOfDataItem(
 			{
-				eventType: "end",
+				eventType: DecoderEventTypes.End,
 				majorType: MajorTypes.TextString,
 			} satisfies EndEventData,
 		);
@@ -96,7 +101,7 @@ export function handleTextStringData(state: ReaderState) {
 
 		state.yieldEventData(
 			{
-				eventType: "data",
+				eventType: DecoderEventTypes.Data,
 				majorType: MajorTypes.TextString,
 				data: new TextDecoder("UTF-8", { "fatal": true }).decode(
 					safeSlice,
@@ -133,16 +138,16 @@ export function consumeTextString<Decoder extends DecoderLike>(
 				}`,
 			);
 		}
-		if (value.eventData.eventType === "start") {
+		if (value.eventData.eventType === DecoderEventTypes.Start) {
 			counter++;
 		}
-		if (value.eventData.eventType === "end") {
+		if (value.eventData.eventType === DecoderEventTypes.End) {
 			counter--;
 		}
 		if (counter === 0) {
 			IterationControl.return();
 		}
-		if (value.eventData.eventType === "data") {
+		if (value.eventData.eventType === DecoderEventTypes.Data) {
 			IterationControl.yield(value.eventData.data);
 		}
 	}

@@ -19,7 +19,7 @@ import {
 	type PullFunctionResult,
 } from "../iteration-control.ts";
 import { defaultDecodingHandlers } from "./handlers.ts";
-import type { DecoderEvent } from "./events.ts";
+import { type DecoderEvent, DecoderEventTypes } from "./events.ts";
 import { decoderFromIterable } from "./iterating.ts";
 
 type DecoderStack = DecoderHandlerInstance[];
@@ -66,7 +66,7 @@ export function transformDecoder<Decoder extends DecoderLike>(
 		if (stack.length > 0) {
 			(stack[stack.length - 1] as DecoderHandlerInstance).onEvent(event);
 		}
-		if (event.eventData.eventType === "end") {
+		if (event.eventData.eventType === DecoderEventTypes.End) {
 			IterationControl.return();
 		}
 		for (const handler of handlers) {

@@ -1,7 +1,11 @@
 import { AdditionalInfo, MajorTypes } from "../common.ts";
 import { IterationControl } from "../iteration-control.ts";
 import { Mode, type ReaderState, SubMode } from "./common.ts";
-import type { EndEventData, StartEventData } from "./events.ts";
+import {
+	DecoderEventTypes,
+	type EndEventData,
+	type StartEventData,
+} from "./events.ts";
 import { flushHeaderAndArgument } from "./header.ts";
 import { serialize } from "../common.ts";
 
@@ -54,7 +58,7 @@ export function handleExpectingDataItemMode(state: ReaderState) {
 			state.subMode = SubMode.ReadingIndefiniteByteString;
 			state.yieldEventData(
 				{
-					eventType: "start",
+					eventType: DecoderEventTypes.Start,
 					length: undefined,
 					majorType: MajorTypes.ByteString,
 				} satisfies StartEventData,
@@ -65,7 +69,7 @@ export function handleExpectingDataItemMode(state: ReaderState) {
 			state.subMode = SubMode.ReadingIndefiniteTextString;
 			state.yieldEventData(
 				{
-					eventType: "start",
+					eventType: DecoderEventTypes.Start,
 					length: undefined,
 					majorType: MajorTypes.TextString,
 				} satisfies StartEventData,
@@ -76,7 +80,7 @@ export function handleExpectingDataItemMode(state: ReaderState) {
 			if (state.subMode == SubMode.ReadingIndefiniteByteString) {
 				state.yieldEndOfDataItem(
 					{
-						eventType: "end",
+						eventType: DecoderEventTypes.End,
 						majorType: MajorTypes.ByteString,
 					} satisfies EndEventData,
 				);
@@ -84,7 +88,7 @@ export function handleExpectingDataItemMode(state: ReaderState) {
 			if (state.subMode == SubMode.ReadingIndefiniteTextString) {
 				state.yieldEndOfDataItem(
 					{
-						eventType: "end",
+						eventType: DecoderEventTypes.End,
 						majorType: MajorTypes.TextString,
 					} satisfies EndEventData,
 				);
@@ -97,7 +101,7 @@ export function handleExpectingDataItemMode(state: ReaderState) {
 				const type = state.hierarchy.pop()!;
 				state.yieldEndOfDataItem(
 					{
-						eventType: "end",
+						eventType: DecoderEventTypes.End,
 						majorType: type as EndEventData["majorType"],
 					} satisfies EndEventData,
 				);
@@ -113,7 +117,7 @@ export function handleExpectingDataItemMode(state: ReaderState) {
 			state.itemsToRead.push(Infinity);
 			state.yieldEventData(
 				{
-					eventType: "start",
+					eventType: DecoderEventTypes.Start,
 					length: undefined,
 					majorType: state.majorType,
 				} satisfies StartEventData,

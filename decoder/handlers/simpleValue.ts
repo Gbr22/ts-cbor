@@ -1,8 +1,8 @@
-import type { DecoderEvent, SimpleValueLiteralEventData } from "../events.ts";
+import type { DecoderEvent, SimpleValueEventData } from "../events.ts";
 import type { DecodingHandler } from "../parse.ts";
 import { decodeSimpleValue, isSimpleValueEvent } from "../simple-value.ts";
 
-type SimpleValueEvent = DecoderEvent<SimpleValueLiteralEventData>;
+type SimpleValueEvent = DecoderEvent<SimpleValueEventData>;
 export const simpleValueDecodingHandler: DecodingHandler<SimpleValueEvent> = {
 	match: isSimpleValueEvent,
 	handle: (control, event) =>
