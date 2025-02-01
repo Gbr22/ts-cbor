@@ -1,5 +1,5 @@
-import { ReaderState } from "./common.ts";
-import { EndEventData } from "./events.ts";
+import type { ReaderState } from "./common.ts";
+import type { EndEventData } from "./events.ts";
 
 export function checkCollectionEnd(state: ReaderState) {
     if (state.itemsToRead.length <= 0) {

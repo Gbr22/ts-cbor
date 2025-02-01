@@ -1,5 +1,6 @@
 import { assertEquals } from "@std/assert/equals";
-import { DecoderEvent, decoderFromStream, DecoderLike, intoAsyncWriter, MajorType, SimpleValue, SimpleValueLiteralEventData, writeSimpleValue } from "../../mod.ts";
+import type { DecoderEvent, DecoderLike, SimpleValueLiteralEventData } from "../../mod.ts";
+import { decoderFromStream, intoAsyncWriter, MajorType, SimpleValue, writeSimpleValue } from "../../mod.ts";
 import { assertNext, assertWriteReadIdentity, bytesToStream, byteWritableStream } from "../../test_utils.ts";
 
 Deno.test(async function simpleValueNumericIdentityTest() {

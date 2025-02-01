@@ -1,8 +1,8 @@
-import { AsyncDecoder, AsyncDecoderLike, AsyncDecoderSymbol, DecoderLike, MapDecoderToIterableIterator, MapDecoderToReturnType, SyncDecoder, SyncDecoderLike, SyncDecoderSymbol } from "./common.ts";
+import { type AsyncDecoder, type AsyncDecoderLike, AsyncDecoderSymbol, type DecoderLike, type MapDecoderToIterableIterator, type MapDecoderToReturnType, type SyncDecoder, type SyncDecoderLike, SyncDecoderSymbol } from "./common.ts";
 import { serialize } from "../common.ts";
-import { handlePullResult, IterationControl, pullFunction, PullFunctionArgs, PullFunctionIterationState, PullFunctionResult } from "../iteration-control.ts";
+import { handlePullResult, IterationControl, pullFunction, type PullFunctionArgs, type PullFunctionIterationState, type PullFunctionResult } from "../iteration-control.ts";
 import { defaultDecodingHandlers } from "./handlers.ts";
-import { DecoderEvent } from "./events.ts";
+import type { DecoderEvent } from "./events.ts";
 import { decoderFromIterable } from "./iterating.ts";
 
 type DecoderStack = DecoderHandlerInstance[];

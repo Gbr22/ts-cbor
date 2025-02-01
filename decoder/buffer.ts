@@ -1,6 +1,6 @@
 import { IterationControl } from "../iteration-control.ts";
-import { ReaderState } from "./common.ts";
-import { DecoderIterationState } from "./iterating.ts";
+import type { ReaderState } from "./common.ts";
+import type { DecoderIterationState } from "./iterating.ts";
 
 export function refreshBuffer(iterationState: DecoderIterationState, state: ReaderState) {
     if (iterationState.pulled.length > 0) {

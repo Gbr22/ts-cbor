@@ -1,6 +1,6 @@
 import { IterationControl } from "../iteration-control.ts";
-import { AnyIterable } from "../utils.ts";
-import { DecoderEvent, DecoderEventData, wrapEventData } from "./events.ts";
+import type { AnyIterable } from "../utils.ts";
+import { type DecoderEvent, type DecoderEventData, wrapEventData } from "./events.ts";
 import { yieldEndOfDataItem } from "./iterating.ts";
 
 export type DecoderEventsAsync = AsyncIterableIterator<DecoderEvent>;

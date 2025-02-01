@@ -1,9 +1,9 @@
-import { IterationControl, IterationState } from "../iteration-control.ts";
-import { AnyIterable } from "../utils.ts";
+import { IterationControl, type IterationState } from "../iteration-control.ts";
+import type { AnyIterable } from "../utils.ts";
 import { refreshBuffer } from "./buffer.ts";
 import { checkCollectionEnd } from "./collection.ts";
-import { createReaderState, AsyncDecoder, AsyncDecoderSymbol, Mode, ReaderState, type MapIterableToDecoder, SyncDecoder, SyncDecoderSymbol } from "./common.ts";
-import { DecoderEvent } from "./events.ts";
+import { createReaderState, type AsyncDecoder, AsyncDecoderSymbol, Mode, type ReaderState, type MapIterableToDecoder, type SyncDecoder, SyncDecoderSymbol } from "./common.ts";
+import type { DecoderEvent } from "./events.ts";
 import { handleExpectingDataItemMode } from "./expectingDataItemMode.ts";
 import { handleReadingArgumentMode } from "./readingArgumentMode.ts";
 import { handleReadingDataMode } from "./readingDataMode.ts";

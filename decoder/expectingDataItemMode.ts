@@ -1,7 +1,7 @@
 import { AdditionalInfo, MajorType } from "../common.ts";
 import { IterationControl } from "../iteration-control.ts";
-import { Mode, ReaderState, SubMode } from "./common.ts";
-import { EndEventData, StartEventData } from "./events.ts";
+import { Mode, type ReaderState, SubMode } from "./common.ts";
+import type { EndEventData, StartEventData } from "./events.ts";
 import { flushHeaderAndArgument } from "./header.ts";
 import { serialize } from "../common.ts";
 

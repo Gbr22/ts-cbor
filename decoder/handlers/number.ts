@@ -1,5 +1,5 @@
 import { decodeNumberEvent, isNumberEvent } from "../numbers.ts";
-import { DecodingHandler } from "../parse.ts";
+import type { DecodingHandler } from "../parse.ts";
 
 export const numberDecodingHandler = {
     match: isNumberEvent,

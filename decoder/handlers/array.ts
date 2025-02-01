@@ -1,7 +1,7 @@
 import { MajorType } from "../../common.ts";
-import { DecoderLike } from "../common.ts";
-import { DecoderEvent, StartArrayEventData } from "../events.ts";
-import { DecoderHandlerInstance, DecodingControl, DecodingHandler } from "../parse.ts";
+import type { DecoderLike } from "../common.ts";
+import type { DecoderEvent, StartArrayEventData } from "../events.ts";
+import type { DecoderHandlerInstance, DecodingControl, DecodingHandler } from "../parse.ts";
 
 type ArrayStartEvent = DecoderEvent<DecoderLike, StartArrayEventData>;
 export const arrayDecodingHandler = {

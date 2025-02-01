@@ -1,9 +1,9 @@
 import { MajorType, serialize } from "../common.ts";
-import { IterationControl, IterationState } from "../iteration-control.ts";
-import { AsyncDecoderLike, AsyncDecoderSymbol, DecoderLike, Mode, ReaderState, SyncDecoderLike, SyncDecoderSymbol } from "./common.ts";
+import { IterationControl, type IterationState } from "../iteration-control.ts";
+import { type AsyncDecoderLike, AsyncDecoderSymbol, type DecoderLike, Mode, type ReaderState, type SyncDecoderLike, SyncDecoderSymbol } from "./common.ts";
 import type { DataEventData, DecoderEvent, EndEventData } from "./events.ts";
-import { IteratorPullResult } from "./iterating.ts";
-import { MapDecoderToIterator } from "./parse.ts";
+import type { IteratorPullResult } from "./iterating.ts";
+import type { MapDecoderToIterator } from "./parse.ts";
 
 const utf8LengthMapping = [
 //   Expected     Mask         Length

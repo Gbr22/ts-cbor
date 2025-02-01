@@ -6,7 +6,7 @@ import { numberDecodingHandler } from "./handlers/number.ts";
 import { simpleValueDecodingHandler } from "./handlers/simpleValue.ts";
 import { taggedValueDecodingHandler } from "./handlers/taggedValue.ts";
 import { textStringDecodingHandler } from "./handlers/textString.ts";
-import { DecodingHandler } from "./parse.ts";
+import type { DecodingHandler } from "./parse.ts";
 
 export const defaultDecodingHandlers: DecodingHandler[] = [
     numberDecodingHandler,

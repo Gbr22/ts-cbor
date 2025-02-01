@@ -1,8 +1,8 @@
 import { MajorType } from "../common.ts";
-import { IterationControl, IterationState } from "../iteration-control.ts";
-import { AsyncDecoderLike, AsyncDecoderSymbol, DecoderLike, MapDecoderToIterableIterator, Mode, ReaderState, SyncDecoderLike, SyncDecoderSymbol } from "./common.ts";
-import { DataEventData, DecoderEvent, EndEventData } from "./events.ts";
-import { IteratorPullResult } from "./iterating.ts";
+import { IterationControl, type IterationState } from "../iteration-control.ts";
+import { type AsyncDecoderLike, AsyncDecoderSymbol, type DecoderLike, type MapDecoderToIterableIterator, Mode, type ReaderState, type SyncDecoderLike, SyncDecoderSymbol } from "./common.ts";
+import type { DataEventData, DecoderEvent, EndEventData } from "./events.ts";
+import type { IteratorPullResult } from "./iterating.ts";
 
 export function handleByteStringData(state: ReaderState) {
     if (state.byteArrayNumberOfBytesToRead <= 0) {

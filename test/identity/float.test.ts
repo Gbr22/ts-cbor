@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert/equals";
-import { decodeFloat, decoderFromStream, FloatLiteralEventData, MajorType, writeFloat16, writeFloat32, writeFloat64, decodeNumberEvent, AsyncWriter, DecoderLike, DecoderEvent } from "../../mod.ts";
+import { decodeFloat, decoderFromStream, type FloatLiteralEventData, MajorType, writeFloat16, writeFloat32, writeFloat64, decodeNumberEvent, type AsyncWriter, type DecoderLike, type DecoderEvent } from "../../mod.ts";
 import { assertNext, assertWriteReadIdentity, bytesToStream, byteWritableStream } from "../../test_utils.ts";
 import { assertAlmostEquals } from "@std/assert/almost-equals";
 import { intoAsyncWriter } from "../../encoder.ts";

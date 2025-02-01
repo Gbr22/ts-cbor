@@ -1,4 +1,4 @@
-import { ReaderState } from "./common.ts";
+import type { ReaderState } from "./common.ts";
 import { flushHeaderAndArgument } from "./header.ts";
 
 export function handleReadingArgumentMode(state: ReaderState) {

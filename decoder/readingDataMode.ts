@@ -1,6 +1,6 @@
 import { MajorType } from "../common.ts";
 import { handleByteStringData } from "./byte-string.ts";
-import { ReaderState } from "./common.ts";
+import type { ReaderState } from "./common.ts";
 import { handleTextStringData } from "./text-string.ts";
 
 export function handleReadingDataMode(state: ReaderState) {

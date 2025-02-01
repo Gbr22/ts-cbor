@@ -1,6 +1,6 @@
-import { DecoderLike } from "../common.ts";
-import { DecoderEvent, SimpleValueLiteralEventData } from "../events.ts";
-import { DecodingHandler } from "../parse.ts";
+import type { DecoderLike } from "../common.ts";
+import type { DecoderEvent, SimpleValueLiteralEventData } from "../events.ts";
+import type { DecodingHandler } from "../parse.ts";
 import { decodeSimpleValue, isSimpleValueEvent } from "../simple-value.ts";
 
 export const simpleValueDecodingHandler = {

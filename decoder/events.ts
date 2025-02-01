@@ -1,7 +1,7 @@
-import { MajorType } from "../common.ts";
-import { DecoderLike, SyncDecoderLike } from "./common.ts";
+import type { MajorType } from "../common.ts";
+import type { DecoderLike, SyncDecoderLike } from "./common.ts";
 import { SyncDecoderSymbol } from "./common.ts";
-import { AsyncDecoderLike } from "./common.ts";
+import type { AsyncDecoderLike } from "./common.ts";
 import { AsyncDecoderSymbol } from "./common.ts";
 
 export type LiteralEventData = IntegerLiteralEventData | SimpleValueLiteralEventData | FloatLiteralEventData | TagLiteralEventData;

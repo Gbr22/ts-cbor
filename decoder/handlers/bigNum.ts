@@ -1,4 +1,4 @@
-import { TaggedValue } from "../../common.ts";
+import type { TaggedValue } from "../../common.ts";
 import { createTaggedValueDecodingHandler } from "./taggedValue.ts";
 
 export const bigNumDecodingHandler = createTaggedValueDecodingHandler((tag)=>{
