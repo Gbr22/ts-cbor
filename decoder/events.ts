@@ -64,44 +64,67 @@ export type IntegerEventData = {
 		| MajorTypes["Tag"];
 	data: Uint8Array;
 };
-export type StartEventData = {
+
+type StartEventMajorType =
+	| MajorTypes["ByteString"]
+	| MajorTypes["TextString"]
+	| MajorTypes["Array"]
+	| MajorTypes["Map"];
+export type StartEventData<
+	T extends StartEventMajorType = StartEventMajorType,
+> = {
 	eventType: DecoderEventTypes["Start"];
 	length: number | bigint | undefined;
-	majorType:
-		| MajorTypes["ByteString"]
-		| MajorTypes["TextString"]
-		| MajorTypes["Array"]
-		| MajorTypes["Map"];
+	majorType: T;
 };
-export type StartArrayEventData = StartEventData & {
+export type StartArrayEventData = StartEventData<MajorTypes["Array"]>;
+export type StartMapEventData = StartEventData<MajorTypes["Map"]>;
+export type StartByteStringEventData = StartEventData<MajorTypes["ByteString"]>;
+export type StartTextStringEventData = StartEventData<MajorTypes["TextString"]>;
+
+type EndEventMajorType =
+	| MajorTypes["ByteString"]
+	| MajorTypes["TextString"]
+	| MajorTypes["Array"]
+	| MajorTypes["Map"];
+
+export type EndEventData<
+	T extends EndEventMajorType = EndEventMajorType,
+> = {
+	eventType: DecoderEventTypes["End"];
+	majorType: T;
+};
+
+export type EndArrayEventData = EndEventData & {
 	majorType: MajorTypes["Array"];
 };
-export type StartMapEventData = StartEventData & {
+export type EndMapEventData = EndEventData & {
 	majorType: MajorTypes["Map"];
 };
-export type StartByteStringEventData = StartEventData & {
+export type EndByteStringEventData = EndEventData & {
 	majorType: MajorTypes["ByteString"];
 };
-export type StartTextStringEventData = StartEventData & {
+export type EndTextStringEventData = EndEventData & {
 	majorType: MajorTypes["TextString"];
 };
-export type EndEventData = {
-	eventType: DecoderEventTypes["End"];
-	majorType:
-		| MajorTypes["ByteString"]
-		| MajorTypes["TextString"]
-		| MajorTypes["Array"]
-		| MajorTypes["Map"];
-};
-export type DataEventData = {
-	eventType: DecoderEventTypes["Data"];
-	majorType: MajorTypes["ByteString"];
-	data: Uint8Array;
-} | {
-	eventType: DecoderEventTypes["Data"];
-	majorType: MajorTypes["TextString"];
-	data: string;
-};
+
+type DataEventMajorType = MajorTypes["ByteString"] | MajorTypes["TextString"];
+
+export type DataEventData<
+	T extends DataEventMajorType = DataEventMajorType,
+> =
+	& ({
+		eventType: DecoderEventTypes["Data"];
+		majorType: MajorTypes["ByteString"];
+		data: Uint8Array;
+	} | {
+		eventType: DecoderEventTypes["Data"];
+		majorType: MajorTypes["TextString"];
+		data: string;
+	})
+	& {
+		majorType: T;
+	};
 
 export type NumberEventData = IntegerEventData | FloatEventData;
 export type DecoderEventData =
@@ -208,3 +231,65 @@ export function isTagEvent(
 	return event.eventData.eventType === DecoderEventTypes.Tag &&
 		event.eventData.majorType === MajorTypes.Tag;
 }
+
+export type TagEvent<D extends DecoderLike = DecoderLike> = DecoderEvent<
+	TagEventData,
+	D
+>;
+export type LiteralEvent<D extends DecoderLike = DecoderLike> = DecoderEvent<
+	LiteralEventData,
+	D
+>;
+export type IntegerEvent<D extends DecoderLike = DecoderLike> = DecoderEvent<
+	IntegerEventData,
+	D
+>;
+export type FloatEvent<D extends DecoderLike = DecoderLike> = DecoderEvent<
+	FloatEventData,
+	D
+>;
+export type NumberEvent<D extends DecoderLike = DecoderLike> = DecoderEvent<
+	NumberEventData,
+	D
+>;
+export type SimpleValueEvent<D extends DecoderLike = DecoderLike> =
+	DecoderEvent<SimpleValueEventData, D>;
+
+export type StartArrayEvent<D extends DecoderLike = DecoderLike> = DecoderEvent<
+	StartArrayEventData,
+	D
+>;
+export type StartMapEvent<D extends DecoderLike = DecoderLike> = DecoderEvent<
+	StartMapEventData,
+	D
+>;
+export type StartByteStringEvent<D extends DecoderLike = DecoderLike> =
+	DecoderEvent<StartByteStringEventData, D>;
+export type StartTextStringEvent<D extends DecoderLike = DecoderLike> =
+	DecoderEvent<StartTextStringEventData, D>;
+
+export type EndArrayEvent<D extends DecoderLike = DecoderLike> = DecoderEvent<
+	EndArrayEventData,
+	D
+>;
+export type EndMapEvent<D extends DecoderLike = DecoderLike> = DecoderEvent<
+	EndMapEventData,
+	D
+>;
+export type EndByteStringEvent<D extends DecoderLike = DecoderLike> =
+	DecoderEvent<EndByteStringEventData, D>;
+export type EndTextStringEvent<D extends DecoderLike = DecoderLike> =
+	DecoderEvent<EndTextStringEventData, D>;
+
+export type StartEvent<
+	T extends StartEventMajorType = StartEventMajorType,
+	D extends DecoderLike = DecoderLike,
+> = DecoderEvent<StartEventData<T>, D>;
+export type EndEvent<
+	T extends EndEventMajorType = EndEventMajorType,
+	D extends DecoderLike = DecoderLike,
+> = DecoderEvent<EndEventData<T>, D>;
+export type DataEvent<
+	T extends DataEventMajorType = DataEventMajorType,
+	D extends DecoderLike = DecoderLike,
+> = DecoderEvent<DataEventData<T>, D>;

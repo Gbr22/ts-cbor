@@ -1,9 +1,7 @@
 import type { TaggedValue } from "../../common.ts";
+import type { TagEvent } from "../events.ts";
 import type { DecodingHandler } from "../parse.ts";
-import {
-	createTaggedValueDecodingHandler,
-	type TagEvent,
-} from "./taggedValue.ts";
+import { createTaggedValueDecodingHandler } from "./taggedValue.ts";
 
 export const bigNumDecodingHandler: DecodingHandler<TagEvent> =
 	createTaggedValueDecodingHandler((tag) => {

@@ -1,9 +1,8 @@
 import { MajorTypes, serialize } from "../../common.ts";
 import {
 	bindIsStartEvent,
-	type DecoderEvent,
 	DecoderEventTypes,
-	type StartTextStringEventData,
+	type StartTextStringEvent,
 } from "../events.ts";
 import type {
 	DecoderHandlerInstance,
@@ -11,8 +10,7 @@ import type {
 	DecodingHandler,
 } from "../parse.ts";
 
-type TextStringStartEvent = DecoderEvent<StartTextStringEventData>;
-export const textStringDecodingHandler: DecodingHandler<TextStringStartEvent> =
+export const textStringDecodingHandler: DecodingHandler<StartTextStringEvent> =
 	{
 		match: bindIsStartEvent(MajorTypes.TextString),
 		handle(control: DecodingControl): DecoderHandlerInstance {
@@ -49,4 +47,4 @@ export const textStringDecodingHandler: DecodingHandler<TextStringStartEvent> =
 				},
 			} as DecoderHandlerInstance;
 		},
-	} satisfies DecodingHandler<TextStringStartEvent>;
+	} satisfies DecodingHandler<StartTextStringEvent>;

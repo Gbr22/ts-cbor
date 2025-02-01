@@ -1,9 +1,8 @@
 import { MajorTypes } from "../../common.ts";
 import {
 	bindIsStartEvent,
-	type DecoderEvent,
 	DecoderEventTypes,
-	type StartMapEventData,
+	type StartMapEvent,
 } from "../events.ts";
 import type {
 	DecoderHandlerInstance,
@@ -11,13 +10,11 @@ import type {
 	DecodingHandler,
 } from "../parse.ts";
 
-type MapStartEvent = DecoderEvent<StartMapEventData>;
-
 type Entry = [unknown, unknown];
 type MapData = Entry[];
 export function createMapDecodingHandler(
 	mapper: (entires: MapData) => unknown,
-): DecodingHandler<MapStartEvent> {
+): DecodingHandler<StartMapEvent> {
 	const handler = {
 		match: bindIsStartEvent(MajorTypes.Map),
 		handle(control: DecodingControl): DecoderHandlerInstance {
@@ -47,13 +44,13 @@ export function createMapDecodingHandler(
 				},
 			} as DecoderHandlerInstance;
 		},
-	} satisfies DecodingHandler<MapStartEvent>;
+	} satisfies DecodingHandler<StartMapEvent>;
 	return handler;
 }
 
-export const mapDecodingHandler: DecodingHandler<MapStartEvent> =
+export const mapDecodingHandler: DecodingHandler<StartMapEvent> =
 	createMapDecodingHandler((entires) => new Map(entires));
-export const mapOrObjectDecodingHandler: DecodingHandler<MapStartEvent> =
+export const mapOrObjectDecodingHandler: DecodingHandler<StartMapEvent> =
 	createMapDecodingHandler((entires) => {
 		const isObject = entires.length > 0 &&
 			entires.every((e) => typeof e[0] === "string");

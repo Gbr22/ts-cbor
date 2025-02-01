@@ -2,9 +2,8 @@ import { MajorTypes, serialize } from "../../common.ts";
 import { concatBytes } from "../../utils.ts";
 import {
 	bindIsStartEvent,
-	type DecoderEvent,
 	DecoderEventTypes,
-	type StartByteStringEventData,
+	type StartByteStringEvent,
 } from "../events.ts";
 import type {
 	DecoderHandlerInstance,
@@ -12,8 +11,7 @@ import type {
 	DecodingHandler,
 } from "../parse.ts";
 
-type ByteStringStartEvent = DecoderEvent<StartByteStringEventData>;
-export const byteStringDecodingHandler: DecodingHandler<ByteStringStartEvent> =
+export const byteStringDecodingHandler: DecodingHandler<StartByteStringEvent> =
 	{
 		match: bindIsStartEvent(MajorTypes.ByteString),
 		handle(control: DecodingControl): DecoderHandlerInstance {
@@ -50,4 +48,4 @@ export const byteStringDecodingHandler: DecodingHandler<ByteStringStartEvent> =
 				},
 			} as DecoderHandlerInstance;
 		},
-	} satisfies DecodingHandler<ByteStringStartEvent>;
+	} satisfies DecodingHandler<StartByteStringEvent>;
