@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert/equals";
-import { consumeTextString, decoderFromStream } from "../../main.ts";
+import { consumeTextString, decoderFromStream } from "../../mod.ts";
 import { assertNext } from "../../test_utils.ts";
 import { collect, iterableToStream } from "../../utils.ts";
 

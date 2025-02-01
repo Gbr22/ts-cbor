@@ -1,8 +1,7 @@
 import { MajorType, serialize } from "../../common.ts";
-import { StartByteStringEventData } from "../../main.ts";
 import { concatBytes } from "../../utils.ts";
 import { DecoderLike } from "../common.ts";
-import { DecoderEvent } from "../events.ts";
+import { DecoderEvent, StartByteStringEventData } from "../events.ts";
 import { DecoderHandlerInstance, DecodingControl, DecodingHandler } from "../parse.ts";
 
 type ByteStringStartEvent = DecoderEvent<DecoderLike, StartByteStringEventData>;

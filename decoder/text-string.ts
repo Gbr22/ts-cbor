@@ -1,8 +1,7 @@
 import { MajorType, serialize } from "../common.ts";
 import { IterationControl, IterationState } from "../iteration-control.ts";
-import { DecoderEvent } from "../main.ts";
 import { AsyncDecoderLike, AsyncDecoderSymbol, DecoderLike, Mode, ReaderState, SyncDecoderLike, SyncDecoderSymbol } from "./common.ts";
-import { DataEventData, EndEventData } from "./events.ts";
+import type { DataEventData, DecoderEvent, EndEventData } from "./events.ts";
 import { IteratorPullResult } from "./iterating.ts";
 import { MapDecoderToIterator } from "./parse.ts";
 

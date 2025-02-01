@@ -1,6 +1,6 @@
 import { isIntegerMajorType, MajorType } from "../common.ts";
-import { DecoderEvent, DecoderLike } from "../main.ts";
-import { NumberEventData } from "./events.ts";
+import { DecoderLike } from "./common.ts";
+import { DecoderEvent, NumberEventData } from "./events.ts";
 
 export function decodeUint(array: Uint8Array): number | bigint {
     if (array.length == 8) {

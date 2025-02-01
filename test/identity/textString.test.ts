@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert/equals";
-import { consumeTextString, decoderFromStream, writeTextStream } from "../../main.ts";
+import { consumeTextString, decoderFromStream, writeTextStream } from "../../mod.ts";
 import { assertNext, assertWriteReadIdentity, bytesToStream, byteWritableStream } from "../../test_utils.ts";
 import { collect, iterableToStream } from "../../utils.ts";
 import { intoAsyncWriter } from "../../encoder.ts";

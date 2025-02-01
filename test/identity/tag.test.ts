@@ -1,4 +1,4 @@
-import { TaggedValue } from "../../main.ts";
+import { TaggedValue } from "../../mod.ts";
 import { assertWriteReadIdentity } from "../../test_utils.ts";
 
 const unassignedTag = 18446744073709551614n;

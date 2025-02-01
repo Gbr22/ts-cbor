@@ -1,6 +1,5 @@
 import { MajorType } from "../common.ts";
-import { DecoderLike } from "../main.ts";
-import { SyncDecoderLike } from "./common.ts";
+import { DecoderLike, SyncDecoderLike } from "./common.ts";
 import { SyncDecoderSymbol } from "./common.ts";
 import { AsyncDecoderLike } from "./common.ts";
 import { AsyncDecoderSymbol } from "./common.ts";

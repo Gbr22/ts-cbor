@@ -1,7 +1,6 @@
 import { AdditionalInfo, isIntegerMajorType, MajorType } from "../common.ts";
-import { SimpleValueLiteralEventData } from "../main.ts";
 import { Mode, ReaderState } from "./common.ts";
-import { FloatLiteralEventData, IntegerLiteralEventData, StartEventData, TagLiteralEventData } from "./events.ts";
+import { FloatLiteralEventData, IntegerLiteralEventData, SimpleValueLiteralEventData, StartEventData, TagLiteralEventData } from "./events.ts";
 import { decodeUint } from "./numbers.ts";
 
 export function flushHeaderAndArgument(state: ReaderState) {

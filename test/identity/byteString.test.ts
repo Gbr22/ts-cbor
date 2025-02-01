@@ -1,4 +1,4 @@
-import { writeByteStream } from "../../main.ts";
+import { writeByteStream } from "../../mod.ts";
 import { assertWriteReadIdentity, writeThenAssertParsedValueEquals } from "../../test_utils.ts";
 import { iterableToStream, concatBytes } from "../../utils.ts";
 

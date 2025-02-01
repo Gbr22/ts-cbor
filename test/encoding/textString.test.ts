@@ -1,4 +1,4 @@
-import { writeTextStream } from "../../main.ts";
+import { writeTextStream } from "../../mod.ts";
 import { hex, writeThenAssertBytesEquals } from "../../test_utils.ts";
 import { iterableToStream } from "../../utils.ts";
 

@@ -1,4 +1,6 @@
-import { DecoderEvent, DecoderLike, MajorType, SimpleValueLiteralEventData } from "../main.ts";
+import { MajorType } from "../common.ts";
+import type { DecoderLike } from "./common.ts";
+import type { DecoderEvent, SimpleValueLiteralEventData } from "./events.ts";
 
 export const UnknownSimpleValue = Symbol("UnknownSimpleValue");
 export type UnknownSimpleValue = typeof UnknownSimpleValue;

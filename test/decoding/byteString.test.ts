@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert/equals";
-import { consumeByteString, decoderFromStream, MajorType } from "../../main.ts";
+import { consumeByteString, decoderFromStream, MajorType } from "../../mod.ts";
 import { assertNext, b, bytesToStream, concat } from "../../test_utils.ts";
 import { collectBytes } from "../../utils.ts";
 

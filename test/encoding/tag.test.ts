@@ -1,6 +1,5 @@
-import { TaggedValue } from "../../main.ts";
+import { encodeValueSync, TaggedValue } from "../../mod.ts";
 import { hex } from "../../test_utils.ts";
-import { encodeValueSync } from "../../encoder.ts";
 import { assertEquals } from "@std/assert/equals";
 
 Deno.test(async function encodeTaggedValueTest() {

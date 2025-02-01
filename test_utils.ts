@@ -1,6 +1,6 @@
 // deno-lint-ignore-file
 import { assertEquals } from "@std/assert/equals";
-import { AsyncWriter, intoAsyncWriter, decoderFromStream, parseDecoder, writeValue } from "./main.ts";
+import { AsyncWriter, intoAsyncWriter, decoderFromStream, parseDecoder, writeValue } from "./mod.ts";
 import { iterableToStream, concatBytes, DropFirst } from "./utils.ts";
 import { encodeValueSync } from "./encoder.ts";
 import { decodeValue } from "./decoder/parse.ts";
