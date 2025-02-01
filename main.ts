@@ -21,6 +21,10 @@ export {
 	writeUndefined,
 	writeInt,
 	writeIntTiny,
+	writeInt8,
+	writeInt16,
+	writeInt32,
+	writeInt64,
 	writeFloat16,
 	writeFloat32,
 	writeFloat64,
@@ -44,7 +48,8 @@ export {
 	intoAsyncWriter,
 } from "./encoder.ts";
 export {
-	parseDecoder
+	parseDecoder,
+	decodeValue,
 } from "./decoder/parse.ts";
 export {
 	consumeByteString,

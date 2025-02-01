@@ -12,7 +12,6 @@ export const arrayHandler = {
     handle(control: DecodingControl): DecoderStackItem {
         const values: ReadableValue[] = [];
         return {
-            type: "complex",
             onEvent(event) {
                 if (event.eventData.eventType === "end") {
                     control.pop();

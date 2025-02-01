@@ -14,7 +14,6 @@ export const byteStringHandler = {
         const values: Uint8Array[] = [];
         let counter = 1;
         return {
-            type: "complex",
             onEvent(event) {
                 if (event.eventData.majorType != MajorType.ByteString) {
                     throw new Error(`Unexpected major type ${event.eventData.majorType} while reading byte string`);

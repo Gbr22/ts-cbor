@@ -14,7 +14,6 @@ export const mapHandler = {
         let hasKey = false;
         let key: ReadableValue | undefined = undefined;
         return {
-            type: "complex",
             onEvent(event) {
                 if (event.eventData.eventType === "end") {
                     control.pop();

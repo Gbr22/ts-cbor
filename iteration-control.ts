@@ -1,4 +1,3 @@
-type IterationControlType = "yield" | "return" | "continue";
 type AsyncPullFn<PullValue = unknown, PullArgs extends any[] = never[]> = (...args: PullArgs)=>Promise<PullValue> | PullValue;
 type SyncPullFn<PullValue = unknown, PullArgs extends any[] = never[]> = (...args: PullArgs)=>PullValue;
 export type IterationState<Yield = unknown, PullValue = unknown, PullArgs extends any[] = never[]> = {
@@ -6,6 +5,12 @@ export type IterationState<Yield = unknown, PullValue = unknown, PullArgs extend
     pulled: PullValue[]
     pull: (...args: PullArgs)=>void;
 };
+export const IterationControlType = Object.freeze({
+    yield: 1,
+    return: 2,
+    continue: 3,
+});
+type IterationControlType = typeof IterationControlType[keyof typeof IterationControlType];
 export class IterationControl<Yield, Exit> {
     type: IterationControlType;
     value: Yield[] | Exit | undefined
@@ -16,15 +21,15 @@ export class IterationControl<Yield, Exit> {
     }
 
     static yield<Yield, Exit = void>(...values: Yield[]): never {
-        throw new IterationControl<Yield, Exit>("yield", values);
+        throw new IterationControl<Yield, Exit>(IterationControlType.yield, values);
     }
     static return<Yeild, Exit>(): never
     static return<Yeild, Exit>(value: Exit): never
     static return<Yeild, Exit>(value?: Exit | undefined): never {
-        throw new IterationControl<Yeild, Exit>("return",value);
+        throw new IterationControl<Yeild, Exit>(IterationControlType.return,value);
     }
     static continue<Yeild, Exit>(): never {
-        throw new IterationControl<Yeild, Exit>("continue");
+        throw new IterationControl<Yeild, Exit>(IterationControlType.continue);
     }
 
     static createAsyncIterator<
@@ -68,10 +73,10 @@ export class IterationControl<Yield, Exit> {
                     await iterate(state);
                 } catch(result) {
                     if (result instanceof IterationControl) {
-                        if (result.type === "yield") {
+                        if (result.type === IterationControlType.yield) {
                             queued.push(...result.value);
                         }
-                        if (result.type === "return") {
+                        if (result.type === IterationControlType.return) {
                             hasReturn = true;
                             returnValue = result.value as Return;
                         }
@@ -129,10 +134,10 @@ export class IterationControl<Yield, Exit> {
                     iterate(state);
                 } catch(result) {
                     if (result instanceof IterationControl) {
-                        if (result.type === "yield") {
+                        if (result.type === IterationControlType.yield) {
                             queued.push(...result.value);
                         }
-                        if (result.type === "return") {
+                        if (result.type === IterationControlType.return) {
                             hasReturn = true;
                             returnValue = result.value as Return;
                         }

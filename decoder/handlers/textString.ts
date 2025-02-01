@@ -12,7 +12,6 @@ export const textStringHandler = {
         const values: string[] = [];
         let counter = 1;
         return {
-            type: "complex",
             onEvent(event) {
                 if (event.eventData.majorType != MajorType.TextString) {
                     throw new Error(`Unexpected major type ${event.eventData.majorType} while reading text string`);
