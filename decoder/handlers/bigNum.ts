@@ -1,0 +1,17 @@
+import { TaggedValue } from "../../common.ts";
+import { createTaggedValueDecodingHandler } from "./taggedValue.ts";
+
+export const bigNumDecodingHandler = createTaggedValueDecodingHandler((tag)=>{
+    return tag === 2 || tag === 3;
+}, (taggedValue: TaggedValue<unknown>) => {
+    const bytes = (taggedValue as TaggedValue<Uint8Array>).value as Uint8Array;
+    const isNegative = taggedValue.tag === 3;
+    let value = 0n;
+    for (const byte of bytes) {
+        value = (value << 8n) | BigInt(byte);
+    }
+    if (isNegative) {
+        value = -1n - value;
+    }
+    return value;
+});

@@ -52,9 +52,9 @@ export function decodeNumberEvent(event: DecoderEvent) {
             let number = decodeUint(event.eventData.data as Uint8Array);
             if (event.eventData.majorType == MajorType.NegativeInteger) {
                 if (typeof number === "bigint") {
-                    number = (number * -1n) -1n;
+                    number = -1n - number;
                 } else {
-                    number = (number * -1) -1;
+                    number = -1 - number;
                 }
             }
             return number;

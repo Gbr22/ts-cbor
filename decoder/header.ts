@@ -1,14 +1,16 @@
 import { AdditionalInfo, isIntegerMajorType, MajorType } from "../common.ts";
-import { IterationControl } from "../iteration-control.ts";
 import { SimpleValueLiteralEventData } from "../main.ts";
-import { AsyncDecoderSymbol, Mode, ReaderState } from "./common.ts";
+import { Mode, ReaderState } from "./common.ts";
 import { FloatLiteralEventData, IntegerLiteralEventData, StartEventData, TagLiteralEventData } from "./events.ts";
-import { yieldEndOfDataItem } from "./iterating.ts";
 import { decodeUint } from "./numbers.ts";
 
 export function flushHeaderAndArgument(state: ReaderState) {
 	if (isIntegerMajorType(state.majorType)) {
 		state.mode = Mode.ExpectingDataItem;
+		let array = state.argumentBytes;
+		if (array.length <= 0) {
+			array = new Uint8Array([state.additionalInfo]);
+		}
 		if (state.majorType === MajorType.Tag) {
 			if (state.argumentBytes.length > 0) {
 				state.numberValue = decodeUint(state.argumentBytes);
@@ -16,12 +18,8 @@ export function flushHeaderAndArgument(state: ReaderState) {
 			state.yieldEndOfDataItem({
 				eventType: "literal",
 				majorType: MajorType.Tag,
-				data: state.argumentBytes,
+				data: array,
 			} satisfies TagLiteralEventData)
-		}
-		let array = state.argumentBytes;
-		if (array.length <= 0) {
-			array = new Uint8Array([state.additionalInfo]);
 		}
 		state.yieldEndOfDataItem({
 			eventType: "literal",

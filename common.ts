@@ -64,10 +64,10 @@ export function serialize(unknown: unknown): string {
 	}
 }
 
-export class TaggedValue {
+export class TaggedValue<T = unknown> {
 	public tag: number | bigint;
-	public value: unknown;
-	constructor(tag: number | bigint, value: unknown) {
+	public value: T;
+	constructor(tag: number | bigint, value: T) {
 		this.tag = tag;
 		this.value = value;
 	}

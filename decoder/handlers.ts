@@ -1,4 +1,5 @@
 import { arrayDecodingHandler } from "./handlers/array.ts";
+import { bigNumDecodingHandler } from "./handlers/bigNum.ts";
 import { byteStringDecodingHandler } from "./handlers/byteString.ts";
 import { mapDecodingHandler, mapOrObjectDecodingHandler } from "./handlers/map.ts";
 import { numberDecodingHandler } from "./handlers/number.ts";
@@ -14,6 +15,7 @@ export const defaultDecodingHandlers: DecodingHandler[] = [
     mapOrObjectDecodingHandler,
     textStringDecodingHandler,
     byteStringDecodingHandler,
+    bigNumDecodingHandler,
     taggedValueDecodingHandler,
 ];
 
@@ -25,5 +27,6 @@ export {
     mapDecodingHandler,
     textStringDecodingHandler,
     byteStringDecodingHandler,
+    bigNumDecodingHandler,
     taggedValueDecodingHandler,
 }

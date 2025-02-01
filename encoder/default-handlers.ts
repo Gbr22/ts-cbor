@@ -1,14 +1,20 @@
-import { writeArray, writeFalse, writeObject, writeTrue } from "../encoder.ts";
+import { createBigNum, writeArray, writeFalse, writeNull, writeObject, writeTrue, writeUndefined } from "../encoder.ts";
 import { writeTextString } from "../encoder.ts";
 import { writeMap } from "../encoder.ts";
 import { EncodingHandler, writeAsyncIterable, writeByteString, writeFloat64, writeInt, writeSyncIterable } from "../encoder.ts";
-import { writeNull, writeUndefined } from "../main.ts";
 
 export const integerEncodingHandler: EncodingHandler<number> = {
     match(value): value is number {
-        return typeof value === "number" && Number.isInteger(value);
+        return typeof value === "number" && Number.isInteger(value) && value <= Number.MAX_SAFE_INTEGER && value >= Number.MIN_SAFE_INTEGER;
     },
     write: writeInt
+};
+
+export const bigNumEncodingHandler: EncodingHandler<bigint> = {
+    match(value): value is bigint {
+        return typeof value === "bigint" && (value < -18446744073709551616n || value > 18446744073709551615n);
+    },
+    replace: createBigNum,
 };
 
 export const floatEncodingHandler: EncodingHandler<number> = {
@@ -17,7 +23,7 @@ export const floatEncodingHandler: EncodingHandler<number> = {
 };
 
 export const bigintEncodingHandler: EncodingHandler<bigint> = {
-    match: value=>typeof value === "bigint",
+    match: (value): value is bigint => typeof value === "bigint" && value >= -18446744073709551616n && value <= 18446744073709551615n,
     write: writeInt
 };
 
@@ -91,4 +97,5 @@ export const defaultEncodingHandlers: EncodingHandler[] = [
     syncIterableEncodingHandler,
     asyncIterableEncodingHandler,
     objectEncodingHandler,
+    bigNumEncodingHandler,
 ];

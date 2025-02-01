@@ -215,19 +215,55 @@ function getNumberWrittenValueAndType(number: number | bigint) {
     let value = number;
     if (value < 0) {
         if (typeof value === "bigint") {
-            value = (value * -1n) - 1n;
+            value = -1n - value;
         }
         else if (typeof value === "number") {
-            value = (value * -1) - 1;
+            value = -1 - value;
         }
     }
     const type = number < 0 ? MajorType.NegativeInteger : MajorType.UnsignedInteger;
     return { type, value };
 }
 
+function bigIntToBytes(number: bigint): Uint8Array {
+    const bytes: number[] = [];
+    while (number > 0) {
+        bytes.unshift(Number(number & 0xFFn));
+        number >>= 8n;
+    }
+    return new Uint8Array(bytes);
+}
+
+export function createBigNum(number: bigint): TaggedValue {
+    const { type, value } = getNumberWrittenValueAndType(number);
+    const bytes = bigIntToBytes(value as bigint);
+    return new TaggedValue(type+2, bytes);
+}
+
+function writeBigIntHelper<Writer extends AnyWriter>(writer: Writer, tagValue: number, value: bigint): WriterReturnType<Writer> {
+    return sequentialWriteGenerator(writer, function*() {
+        yield writeTag(writer, tagValue);
+        const bytes = bigIntToBytes(value);
+        yield writeArgument(writer, MajorType.ByteString, bytes.length);
+        yield write(writer, bytes);
+    });
+}
+
+export function writeBigNum<Writer extends AnyWriter>(writer: Writer, number: bigint): WriterReturnType<Writer> {
+    const { type, value } = getNumberWrittenValueAndType(number);
+    return writeBigIntHelper(writer, type+2, value as bigint);
+}
+
 export function writeInt<Writer extends AnyWriter>(writer: Writer, number: number | bigint): WriterReturnType<Writer> {
     const { type, value } = getNumberWrittenValueAndType(number);
-    return writeArgument(writer, type, value);
+    if (typeof value === "number") {
+        return writeArgument(writer, type, value);
+    } else {
+        if (value <= 0xFFFF_FFFF_FFFF_FFFFn) {
+            return writeArgument(writer, type, value);
+        }
+        return writeBigIntHelper(writer, type+2, value);
+    }
 }
 
 export function writeTag<Writer extends AnyWriter>(writer: Writer, value: number | bigint): WriterReturnType<Writer> {

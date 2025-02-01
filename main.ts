@@ -8,6 +8,8 @@ export {
     mapDecodingHandler,
     textStringDecodingHandler,
     byteStringDecodingHandler,
+    bigNumDecodingHandler,
+    taggedValueDecodingHandler,
 } from "./decoder/handlers.ts";
 export {
 	integerEncodingHandler,
@@ -24,6 +26,7 @@ export {
 	syncIterableEncodingHandler,
 	asyncIterableEncodingHandler,
 	objectEncodingHandler,
+	bigNumEncodingHandler,
 } from "./encoder/default-handlers.ts";
 export {
 	decodeSimpleValue,
@@ -72,6 +75,7 @@ export {
 	writeIterable,
 	writeAsyncIterable,
 	writeSyncIterable,
+	createBigNum,
 	type AsyncWriter,
 	type AsyncWriterSymbol,
 	type SyncWriter,
