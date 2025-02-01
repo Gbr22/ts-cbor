@@ -3,12 +3,15 @@ import { hex, writeThenAssertBytesEquals } from "../../test_utils.ts";
 import { iterableToStream } from "../../utils.ts";
 
 Deno.test(async function encodeByteStringStreamTest() {
-    const chunks = [
-        new Uint8Array([1,2,3]),
-        new Uint8Array([4,5,6]),
-        new Uint8Array([7,8,9]),
-    ];
-    await writeThenAssertBytesEquals(writeByteStream,[iterableToStream(chunks)],hex`
+	const chunks = [
+		new Uint8Array([1, 2, 3]),
+		new Uint8Array([4, 5, 6]),
+		new Uint8Array([7, 8, 9]),
+	];
+	await writeThenAssertBytesEquals(
+		writeByteStream,
+		[iterableToStream(chunks)],
+		hex`
         5F         # bytes(*)
         43         # bytes(3)
             010203 # "\u0001\u0002\u0003"
@@ -17,5 +20,6 @@ Deno.test(async function encodeByteStringStreamTest() {
         43         # bytes(3)
             070809 # "\u0007\b\t"
         FF         # primitive(*)
-    `);
+    `,
+	);
 });

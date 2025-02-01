@@ -1,12 +1,12 @@
 type MajorTypesObject = Readonly<{
-	UnsignedInteger: 0,
-	NegativeInteger: 1,
-	ByteString: 2,
-	TextString: 3,
-	Array: 4,
-	Map: 5,
-	Tag: 6,
-	SimpleValue: 7,
+	UnsignedInteger: 0;
+	NegativeInteger: 1;
+	ByteString: 2;
+	TextString: 3;
+	Array: 4;
+	Map: 5;
+	Tag: 6;
+	SimpleValue: 7;
 }>;
 export const MajorType: MajorTypesObject = Object.freeze({
 	UnsignedInteger: 0,
@@ -27,7 +27,9 @@ export const integerTypes = Object.freeze([
 	MajorType.Tag,
 ]);
 
-export function isIntegerMajorType(type: number): type is typeof integerTypes[number] {
+export function isIntegerMajorType(
+	type: number,
+): type is typeof integerTypes[number] {
 	return (integerTypes as number[]).includes(type);
 }
 
@@ -58,15 +60,20 @@ export function serialize(unknown: unknown): string {
 			const chain = [];
 			let current = unknown.__proto__;
 			chain.push(current);
-			while(true) {
-				if (typeof current === "object" && current && "__proto__" in current) {
+			while (true) {
+				if (
+					typeof current === "object" && current &&
+					"__proto__" in current
+				) {
 					chain.push(current.__proto__);
 					current = current.__proto__;
 					continue;
 				}
 				break;
 			}
-			prefix = `(${chain.map((proto) => proto?.constructor?.name).join(" -> ")})`;
+			prefix = `(${
+				chain.map((proto) => proto?.constructor?.name).join(" -> ")
+			})`;
 		}
 		return `${prefix}${JSON.stringify(unknown)}`;
 	} catch (_err) {
@@ -81,4 +88,4 @@ export class TaggedValue<T = unknown> {
 		this.tag = tag;
 		this.value = value;
 	}
-};
+}

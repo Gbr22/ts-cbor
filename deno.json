@@ -1,19 +1,25 @@
 {
-  "name": "@kilo/cbor",
-  "version": "0.1.0",
-  "exports": "./mod.ts",
-  "tasks": {
-    "dev": "deno test --watch ./test/"
-  },
-  "license": "MIT",
-  "imports": {
-    "@std/assert": "jsr:@std/assert@1"
-  },
-  "lint": {
-    "rules": {
-      "exclude": [
-        "no-explicit-any"
-      ]
-    }
-  }
+	"name": "@kilo/cbor",
+	"version": "0.1.0",
+	"exports": "./mod.ts",
+	"tasks": {
+		"dev": "deno test --watch ./test/"
+	},
+	"license": "MIT",
+	"imports": {
+		"@std/assert": "jsr:@std/assert@1"
+	},
+	"lint": {
+		"rules": {
+			"exclude": [
+				"no-explicit-any"
+			]
+		}
+	},
+	"fmt": {
+		"indentWidth": 4,
+		"useTabs": true,
+		"semiColons": true,
+		"singleQuote": false
+	}
 }

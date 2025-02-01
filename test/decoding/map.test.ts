@@ -1,9 +1,10 @@
 import { hex, parseTest } from "../../test_utils.ts";
 
 Deno.test(async function decodeIndefiniteLengthMapTest() {
-    // Example from Section 3.2.2. of the CBOR specification
+	// Example from Section 3.2.2. of the CBOR specification
 
-    await parseTest(hex`
+	await parseTest(
+		hex`
         BF             # Start indefinite-length map
             63         # First key, UTF-8 string length 3
                 46756e #   "Fun"
@@ -13,9 +14,9 @@ Deno.test(async function decodeIndefiniteLengthMapTest() {
             21         # Second value, -2
             FF         # "break"
         `,
-        {
-            "Fun": true,
-            "Amt": -2,
-        }
-    );
+		{
+			"Fun": true,
+			"Amt": -2,
+		},
+	);
 });
