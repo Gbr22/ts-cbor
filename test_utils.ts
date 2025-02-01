@@ -2,7 +2,9 @@
 import { assertEquals } from "@std/assert/equals";
 import { AsyncWriter, intoAsyncWriter, decoderFromStream, parseDecoder, WritableValue, writeValue } from "./main.ts";
 import { iterableToStream, concatBytes, DropFirst } from "./utils.ts";
-import { intoSyncWriter } from "./encoder.ts";
+import { intoSyncWriter, encodeValueSync } from "./encoder.ts";
+import { decoderFromIterable } from "./decoder/iterating.ts";
+import { decodeValue } from "./decoder/parse.ts";
 
 export function stripWhitespace(s: string) {
     return s.replaceAll(/\s/g,"");
@@ -105,22 +107,14 @@ export async function assertWriteReadIdentityAsync(value: WritableValue) {
     assertEquals(newValue, value, "Expect value to be rewritten correctly");
 }
 
-export async function assertWriteReadIdentitySync(value: WritableValue) {
-    const bytesArray: Uint8Array[] = [];
-    const writer = intoSyncWriter({
-        write(value: Uint8Array) {
-            bytesArray.push(value);
-        }
-    });
-    writeValue(writer,value);
-    const bytes = concatBytes(...bytesArray);
-    const decoder = decoderFromStream(bytesToStream(bytes));
-    const newValue = await parseDecoder(decoder);
+export function assertWriteReadIdentitySync(value: WritableValue) {
+    const bytes = encodeValueSync(value);
+    const newValue = decodeValue(bytes);
     assertEquals(newValue, value, "Expect value to be rewritten correctly");
 }
 
 export async function assertWriteReadIdentity(value: WritableValue) {
-    await assertWriteReadIdentitySync(value);
+    assertWriteReadIdentitySync(value);
     await assertWriteReadIdentityAsync(value);
 }
 

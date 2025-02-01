@@ -1,5 +1,6 @@
 import { AdditionalInfo, MajorType } from "./common.ts";
 import { UnknownSimpleValue } from "./decoder/simple-value.ts";
+import { concatBytes } from "./utils.ts";
 
 export const AsyncWriterSymbol = Symbol("AsyncWriter");
 export type AsyncWriterSymbol = typeof AsyncWriterSymbol;
@@ -390,4 +391,15 @@ export function intoSyncWriter<Writer extends {
             return Reflect.set(target, prop, value);
         }
     }) as Writer & SyncWriter;
+}
+
+export function encodeValueSync(value: WritableValue): Uint8Array {
+    const bytesArray: Uint8Array[] = [];
+    const writer = intoSyncWriter({
+        write(value: Uint8Array) {
+            bytesArray.push(value);
+        }
+    });
+    writeValue(writer,value);
+    return concatBytes(...bytesArray);
 }

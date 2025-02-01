@@ -14,6 +14,7 @@ export {
 	writeTextStream,
 	writeTextString,
 	writeValue,
+	encodeValueSync,
 	writeFalse,
 	writeTrue,
 	writeNull,
@@ -53,6 +54,7 @@ export {
 } from "./decoder/text-string.ts";
 export {
 	decoderFromStream,
+	decoderFromIterable,
 	type IteratorPullResult,
 } from "./decoder/iterating.ts";
 export {
@@ -71,6 +73,10 @@ export {
 	type IntegerLiteralEventData,
 	type SimpleValueLiteralEventData,
 	type StartEventData,
+	type StartArrayEventData,
+	type StartMapEventData,
+	type StartByteStringEventData,
+	type StartTextStringEventData,
 	type EndEventData,
 	type DataEventData,
 	type NumberEventData,

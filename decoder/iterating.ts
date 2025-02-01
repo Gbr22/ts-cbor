@@ -1,7 +1,9 @@
 import { IterationControl, IterationState } from "../iteration-control.ts";
+import { SyncDecoder, SyncDecoderSymbol } from "../main.ts";
+import { AnyIterable } from "../utils.ts";
 import { refreshBuffer } from "./buffer.ts";
 import { checkCollectionEnd } from "./collection.ts";
-import { createReaderState, AsyncDecoder, AsyncDecoderSymbol, Mode, ReaderState } from "./common.ts";
+import { createReaderState, AsyncDecoder, AsyncDecoderSymbol, Mode, ReaderState, type MapIterableToDecoder } from "./common.ts";
 import { DecoderEvent } from "./events.ts";
 import { handleExpectingDataItemMode } from "./expectingDataItemMode.ts";
 import { handleReadingArgumentMode } from "./readingArgumentMode.ts";
@@ -50,23 +52,39 @@ export function yieldEndOfDataItem<Event extends DecoderEvent>(state: ReaderStat
 	IterationControl.yield<DecoderEvent>(event);
 }
 
+export function decoderFromIterable<I extends AnyIterable<Uint8Array>>(iterable: I): MapIterableToDecoder<I> {
+	const readerState = createReaderState();
+	if (Symbol.iterator in iterable) {
+		const it = iterable[Symbol.iterator]();
+		const pull = it.next.bind(it) as ()=>IteratorPullResult<Uint8Array>;
+		const events = ()=>{
+			return IterationControl.createSyncIterator<DecoderEvent, IteratorPullResult<Uint8Array>, never[]>(handleDecoderIteration.bind(null,readerState),pull)[Symbol.iterator]();
+		}
+		const decoder: SyncDecoder = {
+			events,
+			[SyncDecoderSymbol]: undefined as unknown as SyncDecoder,
+		}
+		decoder[SyncDecoderSymbol] = decoder;
+		readerState.decoder = decoder;
+		return decoder as MapIterableToDecoder<I>;
+	}
+	if (Symbol.asyncIterator in iterable) {
+		const it = iterable[Symbol.asyncIterator]();
+		const pull = it.next.bind(it) as ()=>Promise<IteratorPullResult<Uint8Array>>;
+		const events = ()=>{
+			return IterationControl.createAsyncIterator<DecoderEvent, IteratorPullResult<Uint8Array>, never[]>(handleDecoderIteration.bind(null,readerState),pull)[Symbol.asyncIterator]();
+		}
+		const decoder: AsyncDecoder = {
+			events,
+			[AsyncDecoderSymbol]: undefined as unknown as AsyncDecoder,
+		}
+		decoder[AsyncDecoderSymbol] = decoder;
+		readerState.decoder = decoder;
+		return decoder as MapIterableToDecoder<I>;
+	}
+	throw new Error("Expected iterable to have either Symbol.iterator or Symbol.asyncIterator");
+}
+
 export function decoderFromStream(stream: ReadableStream<Uint8Array>): AsyncDecoder {
-	const reader = stream.getReader();
-	const readerState = createReaderState(reader);
-
-	async function pull() {
-		const result = await reader.read();
-		return result;
-	}
-
-	function events() {
-		return IterationControl.createAsyncIterator<DecoderEvent,ReadableStreamReadResult<Uint8Array>, never[]>(handleDecoderIteration.bind(null,readerState),pull)[Symbol.asyncIterator]();
-	}
-	const decoder: AsyncDecoder = {
-		events,
-		[AsyncDecoderSymbol]: undefined as unknown as AsyncDecoder,
-	}
-	decoder[AsyncDecoderSymbol] = decoder;
-	readerState.decoder = decoder;
-	return decoder;
+	return decoderFromIterable(stream);
 }

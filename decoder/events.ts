@@ -35,6 +35,8 @@ export type StartEventData = {
 };
 export type StartArrayEventData = StartEventData & { majorType: typeof MajorType["Array"] };
 export type StartMapEventData = StartEventData & { majorType: typeof MajorType["Map"] };
+export type StartByteStringEventData = StartEventData & { majorType: typeof MajorType["ByteString"] };
+export type StartTextStringEventData = StartEventData & { majorType: typeof MajorType["TextString"] };
 export type EndEventData = {
     eventType: "end",
     majorType: typeof MajorType["ByteString"] | typeof MajorType["TextString"] | typeof MajorType["Array"] | typeof MajorType["Map"],

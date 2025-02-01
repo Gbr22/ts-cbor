@@ -1,4 +1,5 @@
 import { IterationControl } from "../iteration-control.ts";
+import { AnyIterable } from "../utils.ts";
 import { DecoderEvent, DecoderEventData, wrapEventData } from "./events.ts";
 import { yieldEndOfDataItem } from "./iterating.ts";
 
@@ -31,23 +32,21 @@ export interface SyncDecoder {
 export type Decoder = AsyncDecoder | SyncDecoder;
 
 export type MapDecoderToIterableIterator<D,A,B,C> = (
-    D extends AsyncDecoder ?
-        AsyncIterableIterator<A,B,C>
-        :
-        D extends SyncDecoder ?
-            IterableIterator<A,B,C>
-            :
-            never
+    D extends SyncDecoderLike ? IterableIterator<A,B,C> :
+    D extends AsyncDecoderLike ? AsyncIterableIterator<A,B,C> :
+    never
+);
+
+export type MapIterableToDecoder<I extends AnyIterable<Uint8Array>> = (
+    I extends Iterable<Uint8Array> ? SyncDecoder :
+    I extends AsyncIterable<Uint8Array> ? AsyncDecoder :
+    never
 );
 
 export type MapDecoderToReturnType<D,T> = (
-    D extends AsyncDecoder ?
-        Promise<T>
-        :
-        D extends SyncDecoder ?
-            T
-            :
-            never
+    D extends SyncDecoderLike ? T :
+    D extends AsyncDecoderLike ? Promise<T> :
+    never
 );
 
 export const Mode = Object.freeze({
@@ -64,7 +63,6 @@ export const SubMode = Object.freeze({
 
 export type ReaderState = {
 	decoder: AsyncDecoder | SyncDecoder | undefined,
-    reader: ReadableStreamDefaultReader<Uint8Array>
 	isReaderDone: boolean,
 	currentBuffer: Uint8Array
 	mode: number
@@ -86,10 +84,9 @@ export type ReaderState = {
     yieldEndOfDataItem: (data: DecoderEventData)=>never
 };
 
-export function createReaderState(reader: ReadableStreamDefaultReader<Uint8Array>): ReaderState {
+export function createReaderState(): ReaderState {
     return {
         decoder: undefined,
-        reader,
         isReaderDone: false,
         currentBuffer: new Uint8Array(),
         mode: Mode.ExpectingDataItem,
