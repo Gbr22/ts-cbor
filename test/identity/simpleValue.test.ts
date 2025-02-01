@@ -1,7 +1,6 @@
 import { assertEquals } from "@std/assert/equals";
-import { DecoderEvent, decoderFromStream, DecoderLike, MajorType, SimpleValueLiteralEventData, writeSimpleValue } from "../../main.ts";
+import { DecoderEvent, decoderFromStream, DecoderLike, intoAsyncWriter, MajorType, SimpleValue, SimpleValueLiteralEventData, writeSimpleValue } from "../../main.ts";
 import { assertNext, assertWriteReadIdentity, bytesToStream, byteWritableStream } from "../../test_utils.ts";
-import { intoAsyncWriter } from "../../encoder.ts";
 
 Deno.test(async function simpleValueNumericIdentityTest() {
     for (let index=0; index <= 255; index++) {
@@ -21,6 +20,10 @@ Deno.test(async function simpleValueNumericIdentityTest() {
         assertEquals(next.eventData.majorType, MajorType.SimpleValue, "Expect SimpleValue major type");
         assertEquals((next as DecoderEvent<DecoderLike, SimpleValueLiteralEventData>).eventData.simpleValueType, "simple", "Expect simple value type");
         assertEquals((next as DecoderEvent<DecoderLike, SimpleValueLiteralEventData>).eventData.data, simpleValue, "Expect correct value");
+        const withinDefinedRange = simpleValue >= 20 && simpleValue <= 23;
+        if (!withinDefinedRange) {
+            await assertWriteReadIdentity(new SimpleValue(simpleValue));
+        }
     }
 });
 

@@ -18,7 +18,8 @@ export {
 	nullEncodingHandler,
 	undefinedEncodingHandler,
 	stringEncodingHandler,
-	bigintEncodingHandler,
+	simpleValueEncodingHandler,
+	bigIntEncodingHandler,
 	uint8ArrayEncodingHandler,
 	arrayBufferEncodingHandler,
 	mapEncodingHandler,
@@ -32,6 +33,7 @@ export {
 	decodeSimpleValue,
 	isSimpleValueEvent,
 	UnknownSimpleValue,
+	SimpleValue,
 } from "./decoder/simple-value.ts";
 export {
 	decodeUint,
@@ -49,6 +51,7 @@ export {
 	writeValue,
 	writeFalse,
 	writeTrue,
+	writeBoolean,
 	writeNull,
 	writeUndefined,
 	writeInt,

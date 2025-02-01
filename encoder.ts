@@ -1,4 +1,5 @@
 import { AdditionalInfo, MajorType, serialize, TaggedValue } from "./common.ts";
+import { SimpleValue } from "./decoder/simple-value.ts";
 import { defaultEncodingHandlers } from "./encoder/default-handlers.ts";
 import { concatBytes } from "./utils.ts";
 
@@ -77,6 +78,10 @@ export function writeTrue<Writer extends AnyWriter>(writer: Writer): WriterRetur
     return write(writer,new Uint8Array([0xF5]));
 }
 
+export function writeBoolean<Writer extends AnyWriter>(writer: Writer, value: boolean): WriterReturnType<Writer> {
+    return write(writer,new Uint8Array([value ? 0xF5 : 0xF4]));
+}
+
 export function writeNull<Writer extends AnyWriter>(writer: Writer): WriterReturnType<Writer> {
     return write(writer,new Uint8Array([0xF6]));
 }
@@ -92,13 +97,14 @@ export function writeHeader<Writer extends AnyWriter>(writer: Writer, majorType:
     header[0] = (majorType << 5) | additionalInfo;
     return write(writer,header);
 }
-export function writeSimpleValue<Writer extends AnyWriter>(writer: Writer, value: number): WriterReturnType<Writer> {
-    if (value <= 31) {
-        return writeHeader(writer, MajorType.SimpleValue, value);
+export function writeSimpleValue<Writer extends AnyWriter>(writer: Writer, value: number | SimpleValue): WriterReturnType<Writer> {
+    const numberValue = value instanceof SimpleValue ? value.value : value;
+    if (numberValue <= 31) {
+        return writeHeader(writer, MajorType.SimpleValue, numberValue);
     }
     return write(writer,new Uint8Array([
         createHeader(MajorType.SimpleValue, AdditionalInfo.Length1),
-        value
+        numberValue
     ]));
 }
 export function writeBreak<Writer extends AnyWriter>(writer: Writer): WriterReturnType<Writer> {

@@ -1,4 +1,5 @@
-import { createBigNum, writeArray, writeFalse, writeNull, writeObject, writeTrue, writeUndefined } from "../encoder.ts";
+import { SimpleValue } from "../decoder/simple-value.ts";
+import { createBigNum, writeArray, writeBoolean, writeFalse, writeNull, writeObject, writeSimpleValue, writeTrue, writeUndefined } from "../encoder.ts";
 import { writeTextString } from "../encoder.ts";
 import { writeMap } from "../encoder.ts";
 import { EncodingHandler, writeAsyncIterable, writeByteString, writeFloat64, writeInt, writeSyncIterable } from "../encoder.ts";
@@ -22,7 +23,7 @@ export const floatEncodingHandler: EncodingHandler<number> = {
     write: writeFloat64
 };
 
-export const bigintEncodingHandler: EncodingHandler<bigint> = {
+export const bigIntEncodingHandler: EncodingHandler<bigint> = {
     match: (value): value is bigint => typeof value === "bigint" && value >= -18446744073709551616n && value <= 18446744073709551615n,
     write: writeInt
 };
@@ -30,6 +31,11 @@ export const bigintEncodingHandler: EncodingHandler<bigint> = {
 export const stringEncodingHandler: EncodingHandler<string> = {
     match: value=>typeof value === "string",
     write: writeTextString
+};
+
+export const simpleValueEncodingHandler: EncodingHandler<SimpleValue> = {
+    match: value=>value instanceof SimpleValue,
+    write: writeSimpleValue
 };
 
 export const uint8ArrayEncodingHandler: EncodingHandler<Uint8Array> = {
@@ -69,7 +75,7 @@ export const arrayEncodingHandler: EncodingHandler<Array<unknown>> = {
 
 export const booleanEncodingHandler: EncodingHandler<boolean> = {
     match: value=>typeof value === "boolean",
-    write: (writer, value)=>value ? writeTrue(writer) : writeFalse(writer)
+    write: writeBoolean
 };
 
 export const nullEncodingHandler: EncodingHandler<null> = {
@@ -89,7 +95,8 @@ export const defaultEncodingHandlers: EncodingHandler[] = [
     nullEncodingHandler,
     undefinedEncodingHandler,
     stringEncodingHandler,
-    bigintEncodingHandler,
+    simpleValueEncodingHandler,
+    bigIntEncodingHandler,
     uint8ArrayEncodingHandler,
     arrayBufferEncodingHandler,
     mapEncodingHandler,

@@ -3,7 +3,7 @@ import { DecoderEvent, DecoderLike, MajorType, SimpleValueLiteralEventData } fro
 export const UnknownSimpleValue = Symbol("UnknownSimpleValue");
 export type UnknownSimpleValue = typeof UnknownSimpleValue;
 
-export function decodeSimpleValue(numberValue: number): boolean | null | undefined | UnknownSimpleValue {
+export function decodeSimpleValue(numberValue: number): boolean | null | undefined | SimpleValue {
     if (numberValue == 20) {
         return false;
     }
@@ -16,9 +16,16 @@ export function decodeSimpleValue(numberValue: number): boolean | null | undefin
     if (numberValue == 23) {
         return undefined;
     }
-    return UnknownSimpleValue;
+    return new SimpleValue(numberValue);
 }
 
 export function isSimpleValueEvent<Event extends DecoderEvent>(event: Event): event is Event & DecoderEvent<DecoderLike, SimpleValueLiteralEventData> {
     return event.eventData.eventType === "literal" && event.eventData.majorType === MajorType.SimpleValue && event.eventData.simpleValueType === "simple";
+}
+
+export class SimpleValue {
+    value: number;
+    constructor(value: number) {
+        this.value = value;
+    }
 }
