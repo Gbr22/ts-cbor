@@ -37,6 +37,8 @@ export {
 } from "./decoder/numbers.ts";
 export {
 	encodeValueSync,
+	encodeValueAsync,
+	writeTag,
 	writeByteStream,
 	writeByteString,
 	writeTextStream,
@@ -126,4 +128,5 @@ export {
 } from "./decoder/events.ts";
 export {
 	MajorType,
+	TaggedValue,
 } from "./common.ts";

@@ -29,7 +29,7 @@ export const AdditionalInfo = Object.freeze({
 	IndefiniteLength: 31,
 });
 
-export function serialize(unknown: unknown) {
+export function serialize(unknown: unknown): string {
 	if (unknown === undefined) {
 		return "undefined";
 	}
@@ -39,9 +39,36 @@ export function serialize(unknown: unknown) {
 	if (typeof unknown === "bigint") {
 		return `${unknown}n`;
 	}
+	if (unknown instanceof Array) {
+		return `[${unknown.map(serialize).join(", ")}]`;
+	}
 	try {
-		return JSON.stringify(unknown);
+		let prefix = "";
+		if (typeof unknown === "object" && unknown && "__proto__" in unknown) {
+			const chain = [];
+			let current = unknown.__proto__;
+			chain.push(current);
+			while(true) {
+				if (typeof current === "object" && current && "__proto__" in current) {
+					chain.push(current.__proto__);
+					current = current.__proto__;
+					continue;
+				}
+				break;
+			}
+			prefix = `(${chain.map((proto) => proto?.constructor?.name).join(" -> ")})`;
+		}
+		return `${prefix}${JSON.stringify(unknown)}`;
 	} catch (_err) {
 		return `'${unknown}'`;
 	}
 }
+
+export class TaggedValue {
+	public tag: number | bigint;
+	public value: unknown;
+	constructor(tag: number | bigint, value: unknown) {
+		this.tag = tag;
+		this.value = value;
+	}
+};

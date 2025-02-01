@@ -1,5 +1,4 @@
-import { AdditionalInfo, MajorType } from "./common.ts";
-import { UnknownSimpleValue } from "./decoder/simple-value.ts";
+import { AdditionalInfo, MajorType, serialize, TaggedValue } from "./common.ts";
 import { defaultEncodingHandlers } from "./encoder/default-handlers.ts";
 import { concatBytes } from "./utils.ts";
 
@@ -231,6 +230,10 @@ export function writeInt<Writer extends AnyWriter>(writer: Writer, number: numbe
     return writeArgument(writer, type, value);
 }
 
+export function writeTag<Writer extends AnyWriter>(writer: Writer, value: number | bigint): WriterReturnType<Writer> {
+    return writeArgument(writer, MajorType.Tag, value);
+}
+
 function writeFloatN<Writer extends AnyWriter,ArrayConstructor extends typeof Float16Array | typeof Float32Array | typeof Float64Array>(writer: Writer, value: number | InstanceType<ArrayConstructor>, ArrayConstructor: ArrayConstructor, simpleValue: number): WriterReturnType<Writer> {
     let floatArray: InstanceType<ArrayConstructor> = undefined!;
     if (value instanceof ArrayConstructor) {
@@ -335,16 +338,40 @@ export function writeIterable<Writer extends AnyWriter>(writer: Writer, value: I
 
 export type EncodingHandler<T = unknown> = {
     match(value: unknown): value is T;
-    write<Writer extends AnyWriter>(writer: Writer, value: T): WriterReturnType<Writer>;
+    write?<Writer extends AnyWriter>(writer: Writer, value: T): WriterReturnType<Writer>;
+    replace?(value: T): unknown;
 };
 
 export function writeValue<Writer extends AnyWriter>(writer: Writer, value: unknown, encodingHandlers: EncodingHandler[] = defaultEncodingHandlers): WriterReturnType<Writer> {
-    for (const handler of encodingHandlers) {
-        if (handler.match(value)) {
-            return handler.write(writer, value);
+    let didReplace = false;
+    function write(value: unknown) {
+        if (value instanceof TaggedValue) {
+            return sequentialWriteGenerator(writer, function*() {
+                for (const handler of encodingHandlers) {
+                    if (handler.match(value.value)) {
+                        yield writeTag(writer, value.tag);
+                        yield handler.write?.(writer, value.value);
+                        return;
+                    }
+                }
+                throw new Error(`No encoding handler for tagged value with tag (${value.tag}): ${serialize(value)}`);
+            });
+        } else {
+            for (const handler of encodingHandlers) {
+                if (handler.match(value)) {
+                    if (handler.replace && !didReplace) {
+                        didReplace = true;
+                        write(handler.replace(value));
+                    }
+                    return sequentialWriteGenerator(writer, function*() {
+                        yield handler.write?.(writer, value);
+                    });
+                }
+            }
+            throw new Error(`No encoding handler for untagged value with ${serialize(value)}`);
         }
     }
-    return sequentialWriteGenerator(writer, function*() {});
+    return write(value);
 }
 
 export function intoAsyncWriter<Writer extends {
@@ -405,5 +432,16 @@ export function encodeValueSync(value: unknown, encodingHandlers: EncodingHandle
         }
     });
     writeValue(writer,value,encodingHandlers);
+    return concatBytes(...bytesArray);
+}
+
+export async function encodeValueAsync(value: unknown, encodingHandlers: EncodingHandler[] = defaultEncodingHandlers): Promise<Uint8Array> {
+    const bytesArray: Uint8Array[] = [];
+    const writer = intoAsyncWriter({
+        write(value: Uint8Array) {
+            bytesArray.push(value);
+        }
+    });
+    await writeValue(writer,value,encodingHandlers);
     return concatBytes(...bytesArray);
 }
