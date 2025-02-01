@@ -1,4 +1,4 @@
-import { MajorType } from "../common.ts";
+import { MajorTypes } from "../common.ts";
 import { IterationControl, type IterationState } from "../iteration-control.ts";
 import {
 	type AsyncDecoderLike,
@@ -19,7 +19,7 @@ export function handleByteStringData(state: ReaderState) {
 		state.yieldEndOfDataItem(
 			{
 				eventType: "end",
-				majorType: MajorType.ByteString,
+				majorType: MajorTypes.ByteString,
 			} satisfies EndEventData,
 		);
 	}
@@ -36,7 +36,7 @@ export function handleByteStringData(state: ReaderState) {
 		state.yieldEventData(
 			{
 				eventType: "data",
-				majorType: MajorType.ByteString,
+				majorType: MajorTypes.ByteString,
 				data: slice,
 			} satisfies DataEventData,
 		);
@@ -63,7 +63,7 @@ export function consumeByteString<Decoder extends DecoderLike>(
 			);
 		}
 
-		if (value.eventData.majorType != MajorType.ByteString) {
+		if (value.eventData.majorType != MajorTypes.ByteString) {
 			throw new Error(
 				`Unexpected major type ${value.eventData.majorType} while reading byte string`,
 			);

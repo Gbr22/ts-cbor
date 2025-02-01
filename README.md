@@ -28,7 +28,7 @@ const value = await parseDecoder(decoder);
 const events = decoder.events();
 for await (const event of events) {
 	// Handle events
-	if (isStartEvent(event, MajorType.TextString)) {
+	if (isStartEvent(event, MajorTypes.TextString)) {
 		const it = consumeTextString(event); // Returns an AsyncIterableIterator<string> or IterableIterator<string>
 	}
 }

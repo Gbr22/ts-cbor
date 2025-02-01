@@ -1,4 +1,4 @@
-import { MajorType } from "../../common.ts";
+import { MajorTypes } from "../../common.ts";
 import {
 	bindIsStartEvent,
 	type DecoderEvent,
@@ -12,7 +12,7 @@ import type {
 
 type ArrayStartEvent = DecoderEvent<StartArrayEventData>;
 export const arrayDecodingHandler: DecodingHandler<ArrayStartEvent> = {
-	match: bindIsStartEvent(MajorType.Array),
+	match: bindIsStartEvent(MajorTypes.Array),
 	handle(control: DecodingControl): DecoderHandlerInstance {
 		const values: unknown[] = [];
 		return {

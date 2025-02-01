@@ -7,7 +7,6 @@ import type {
 import {
 	decoderFromStream,
 	intoAsyncWriter,
-	MajorType,
 	SimpleValue,
 	writeSimpleValue,
 } from "../../mod.ts";
@@ -17,6 +16,7 @@ import {
 	bytesToStream,
 	byteWritableStream,
 } from "../../test_utils.ts";
+import { MajorTypes } from "../../common.ts";
 
 Deno.test(async function simpleValueNumericIdentityTest() {
 	for (let index = 0; index <= 255; index++) {
@@ -39,7 +39,7 @@ Deno.test(async function simpleValueNumericIdentityTest() {
 		);
 		assertEquals(
 			next.eventData.majorType,
-			MajorType.SimpleValue,
+			MajorTypes.SimpleValue,
 			"Expect SimpleValue major type",
 		);
 		assertEquals(

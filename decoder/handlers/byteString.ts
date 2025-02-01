@@ -1,4 +1,4 @@
-import { MajorType, serialize } from "../../common.ts";
+import { MajorTypes, serialize } from "../../common.ts";
 import { concatBytes } from "../../utils.ts";
 import type { DecoderEvent, StartByteStringEventData } from "../events.ts";
 import type {
@@ -12,14 +12,14 @@ export const byteStringDecodingHandler: DecodingHandler<ByteStringStartEvent> =
 	{
 		match(event: DecoderEvent): event is ByteStringStartEvent {
 			return event.eventData.eventType === "start" &&
-				event.eventData.majorType === MajorType.ByteString;
+				event.eventData.majorType === MajorTypes.ByteString;
 		},
 		handle(control: DecodingControl): DecoderHandlerInstance {
 			const values: Uint8Array[] = [];
 			let counter = 1;
 			return {
 				onEvent(event) {
-					if (event.eventData.majorType != MajorType.ByteString) {
+					if (event.eventData.majorType != MajorTypes.ByteString) {
 						throw new Error(
 							`Unexpected major type ${event.eventData.majorType} while reading byte string`,
 						);

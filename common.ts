@@ -1,4 +1,4 @@
-type MajorTypesObject = Readonly<{
+export type MajorTypes = Readonly<{
 	UnsignedInteger: 0;
 	NegativeInteger: 1;
 	ByteString: 2;
@@ -8,7 +8,7 @@ type MajorTypesObject = Readonly<{
 	Tag: 6;
 	SimpleValue: 7;
 }>;
-export const MajorType: MajorTypesObject = Object.freeze({
+export const MajorTypes: MajorTypes = Object.freeze({
 	UnsignedInteger: 0,
 	NegativeInteger: 1,
 	ByteString: 2,
@@ -19,12 +19,12 @@ export const MajorType: MajorTypesObject = Object.freeze({
 	SimpleValue: 7,
 });
 
-export type MajorType = typeof MajorType[keyof typeof MajorType];
+export type MajorType = typeof MajorTypes[keyof MajorTypes];
 
 export const integerTypes = Object.freeze([
-	MajorType.UnsignedInteger,
-	MajorType.NegativeInteger,
-	MajorType.Tag,
+	MajorTypes.UnsignedInteger,
+	MajorTypes.NegativeInteger,
+	MajorTypes.Tag,
 ]);
 
 export function isIntegerMajorType(

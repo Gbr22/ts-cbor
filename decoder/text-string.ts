@@ -1,4 +1,4 @@
-import { MajorType, serialize } from "../common.ts";
+import { MajorTypes, serialize } from "../common.ts";
 import { IterationControl, type IterationState } from "../iteration-control.ts";
 import {
 	type AsyncDecoderLike,
@@ -37,7 +37,7 @@ export function handleTextStringData(state: ReaderState) {
 		state.yieldEndOfDataItem(
 			{
 				eventType: "end",
-				majorType: MajorType.TextString,
+				majorType: MajorTypes.TextString,
 			} satisfies EndEventData,
 		);
 	}
@@ -97,7 +97,7 @@ export function handleTextStringData(state: ReaderState) {
 		state.yieldEventData(
 			{
 				eventType: "data",
-				majorType: MajorType.TextString,
+				majorType: MajorTypes.TextString,
 				data: new TextDecoder("UTF-8", { "fatal": true }).decode(
 					safeSlice,
 				),
@@ -126,7 +126,7 @@ export function consumeTextString<Decoder extends DecoderLike>(
 			);
 		}
 
-		if (value.eventData.majorType != MajorType.TextString) {
+		if (value.eventData.majorType != MajorTypes.TextString) {
 			throw new Error(
 				`Unexpected major type ${value.eventData.majorType} while reading text string event: ${
 					serialize(value)

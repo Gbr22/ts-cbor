@@ -1,4 +1,9 @@
-import { AdditionalInfo, MajorType, serialize, TaggedValue } from "./common.ts";
+import {
+	AdditionalInfo,
+	MajorTypes,
+	serialize,
+	TaggedValue,
+} from "./common.ts";
 import { SimpleValue } from "./decoder/simple-value.ts";
 import { defaultEncodingHandlers } from "./encoder/default-handlers.ts";
 import { concatBytes } from "./utils.ts";
@@ -145,12 +150,12 @@ export function writeSimpleValue<Writer extends AnyWriter>(
 ): WriterReturnType<Writer> {
 	const numberValue = value instanceof SimpleValue ? value.value : value;
 	if (numberValue <= 31) {
-		return writeHeader(writer, MajorType.SimpleValue, numberValue);
+		return writeHeader(writer, MajorTypes.SimpleValue, numberValue);
 	}
 	return write(
 		writer,
 		new Uint8Array([
-			createHeader(MajorType.SimpleValue, AdditionalInfo.Length1),
+			createHeader(MajorTypes.SimpleValue, AdditionalInfo.Length1),
 			numberValue,
 		]),
 	);
@@ -160,7 +165,7 @@ export function writeBreak<Writer extends AnyWriter>(
 ): WriterReturnType<Writer> {
 	return writeHeader(
 		writer,
-		MajorType.SimpleValue,
+		MajorTypes.SimpleValue,
 		AdditionalInfo.IndefiniteLength,
 	);
 }
@@ -286,7 +291,7 @@ export function writeByteString<Writer extends AnyWriter>(
 	value: Uint8Array | ArrayBuffer,
 ): WriterReturnType<Writer> {
 	return sequentialWriteGenerator(writer, function* () {
-		yield writeArgument(writer, MajorType.ByteString, value.byteLength);
+		yield writeArgument(writer, MajorTypes.ByteString, value.byteLength);
 		yield write(writer, value);
 	});
 }
@@ -297,7 +302,7 @@ export async function writeByteStream(
 ) {
 	await writeHeader(
 		writer,
-		MajorType.ByteString,
+		MajorTypes.ByteString,
 		AdditionalInfo.IndefiniteLength,
 	);
 	for await (const value of stream) {
@@ -312,7 +317,7 @@ export function writeTextString<Writer extends AnyWriter>(
 ): WriterReturnType<Writer> {
 	const buffer = new TextEncoder().encode(value);
 	return sequentialWriteGenerator(writer, function* () {
-		yield writeArgument(writer, MajorType.TextString, buffer.byteLength);
+		yield writeArgument(writer, MajorTypes.TextString, buffer.byteLength);
 		yield write(writer, buffer);
 	});
 }
@@ -323,7 +328,7 @@ export async function writeTextStream(
 ) {
 	await writeHeader(
 		writer,
-		MajorType.TextString,
+		MajorTypes.TextString,
 		AdditionalInfo.IndefiniteLength,
 	);
 	for await (const value of stream) {
@@ -342,8 +347,8 @@ function getNumberWrittenValueAndType(number: number | bigint) {
 		}
 	}
 	const type = number < 0
-		? MajorType.NegativeInteger
-		: MajorType.UnsignedInteger;
+		? MajorTypes.NegativeInteger
+		: MajorTypes.UnsignedInteger;
 	return { type, value };
 }
 
@@ -370,7 +375,7 @@ function writeBigIntHelper<Writer extends AnyWriter>(
 	return sequentialWriteGenerator(writer, function* () {
 		yield writeTag(writer, tagValue);
 		const bytes = bigIntToBytes(value);
-		yield writeArgument(writer, MajorType.ByteString, bytes.length);
+		yield writeArgument(writer, MajorTypes.ByteString, bytes.length);
 		yield write(writer, bytes);
 	});
 }
@@ -400,7 +405,7 @@ export function writeTag<Writer extends AnyWriter>(
 	writer: Writer,
 	value: number | bigint,
 ): WriterReturnType<Writer> {
-	return writeArgument(writer, MajorType.Tag, value);
+	return writeArgument(writer, MajorTypes.Tag, value);
 }
 
 function writeFloatN<
@@ -425,7 +430,7 @@ function writeFloatN<
 	const buffer = new Uint8Array(floatArray.buffer);
 	const reverse = new Uint8Array([...buffer].reverse());
 	return sequentialWriteGenerator(writer, function* () {
-		yield writeHeader(writer, MajorType.SimpleValue, simpleValue);
+		yield writeHeader(writer, MajorTypes.SimpleValue, simpleValue);
 		yield write(writer, reverse);
 	});
 }
@@ -458,11 +463,11 @@ export function writeArrayHeader<Writer extends AnyWriter>(
 	if (length === undefined) {
 		return writeHeader(
 			writer,
-			MajorType.Array,
+			MajorTypes.Array,
 			AdditionalInfo.IndefiniteLength,
 		);
 	}
-	return writeArgument(writer, MajorType.Array, length);
+	return writeArgument(writer, MajorTypes.Array, length);
 }
 
 export function writeMapHeader<Writer extends AnyWriter>(
@@ -472,11 +477,11 @@ export function writeMapHeader<Writer extends AnyWriter>(
 	if (length === undefined) {
 		return writeHeader(
 			writer,
-			MajorType.Map,
+			MajorTypes.Map,
 			AdditionalInfo.IndefiniteLength,
 		);
 	}
-	return writeArgument(writer, MajorType.Map, length);
+	return writeArgument(writer, MajorTypes.Map, length);
 }
 
 export function writeMap<Writer extends AnyWriter>(

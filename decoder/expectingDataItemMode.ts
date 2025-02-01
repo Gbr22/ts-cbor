@@ -1,4 +1,4 @@
-import { AdditionalInfo, MajorType } from "../common.ts";
+import { AdditionalInfo, MajorTypes } from "../common.ts";
 import { IterationControl } from "../iteration-control.ts";
 import { Mode, type ReaderState, SubMode } from "./common.ts";
 import type { EndEventData, StartEventData } from "./events.ts";
@@ -49,35 +49,35 @@ export function handleExpectingDataItemMode(state: ReaderState) {
 	if (state.additionalInfo == AdditionalInfo.IndefiniteLength) {
 		state.isIndefinite = true;
 		state.numberOfBytesToRead = 0;
-		if (state.majorType == MajorType.ByteString) {
+		if (state.majorType == MajorTypes.ByteString) {
 			state.mode = Mode.ExpectingDataItem;
 			state.subMode = SubMode.ReadingIndefiniteByteString;
 			state.yieldEventData(
 				{
 					eventType: "start",
 					length: undefined,
-					majorType: MajorType.ByteString,
+					majorType: MajorTypes.ByteString,
 				} satisfies StartEventData,
 			);
 		}
-		if (state.majorType == MajorType.TextString) {
+		if (state.majorType == MajorTypes.TextString) {
 			state.mode = Mode.ExpectingDataItem;
 			state.subMode = SubMode.ReadingIndefiniteTextString;
 			state.yieldEventData(
 				{
 					eventType: "start",
 					length: undefined,
-					majorType: MajorType.TextString,
+					majorType: MajorTypes.TextString,
 				} satisfies StartEventData,
 			);
 		}
-		if (state.majorType == MajorType.SimpleValue) {
+		if (state.majorType == MajorTypes.SimpleValue) {
 			state.mode = Mode.ExpectingDataItem;
 			if (state.subMode == SubMode.ReadingIndefiniteByteString) {
 				state.yieldEndOfDataItem(
 					{
 						eventType: "end",
-						majorType: MajorType.ByteString,
+						majorType: MajorTypes.ByteString,
 					} satisfies EndEventData,
 				);
 			}
@@ -85,7 +85,7 @@ export function handleExpectingDataItemMode(state: ReaderState) {
 				state.yieldEndOfDataItem(
 					{
 						eventType: "end",
-						majorType: MajorType.TextString,
+						majorType: MajorTypes.TextString,
 					} satisfies EndEventData,
 				);
 			}
@@ -105,8 +105,8 @@ export function handleExpectingDataItemMode(state: ReaderState) {
 			throw new Error(`Unexpected stop code`);
 		}
 		if (
-			state.majorType == MajorType.Array ||
-			state.majorType == MajorType.Map
+			state.majorType == MajorTypes.Array ||
+			state.majorType == MajorTypes.Map
 		) {
 			state.mode = Mode.ExpectingDataItem;
 			state.hierarchy.push(state.majorType);

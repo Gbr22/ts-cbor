@@ -1,14 +1,14 @@
-import { MajorType } from "../common.ts";
+import { MajorTypes } from "../common.ts";
 import { handleByteStringData } from "./byte-string.ts";
 import type { ReaderState } from "./common.ts";
 import { handleTextStringData } from "./text-string.ts";
 
 export function handleReadingDataMode(state: ReaderState) {
-	if (state.majorType == MajorType.ByteString) {
+	if (state.majorType == MajorTypes.ByteString) {
 		handleByteStringData(state);
 		return;
 	}
-	if (state.majorType == MajorType.TextString) {
+	if (state.majorType == MajorTypes.TextString) {
 		handleTextStringData(state);
 		return;
 	}

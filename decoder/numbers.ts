@@ -1,4 +1,4 @@
-import { isIntegerMajorType, MajorType } from "../common.ts";
+import { isIntegerMajorType, MajorTypes } from "../common.ts";
 import type { DecoderLike } from "./common.ts";
 import type { DecoderEvent, NumberEventData } from "./events.ts";
 
@@ -41,12 +41,12 @@ export function isNumberEvent<Event extends DecoderEvent>(
 	if (event.eventData.eventType != "literal") {
 		return false;
 	}
-	const isInt = event.eventData.majorType === MajorType.UnsignedInteger ||
-		event.eventData.majorType === MajorType.NegativeInteger;
+	const isInt = event.eventData.majorType === MajorTypes.UnsignedInteger ||
+		event.eventData.majorType === MajorTypes.NegativeInteger;
 	if (isInt) {
 		return true;
 	}
-	const isFloat = event.eventData.majorType === MajorType.SimpleValue &&
+	const isFloat = event.eventData.majorType === MajorTypes.SimpleValue &&
 		event.eventData.data instanceof Uint8Array;
 	if (isFloat) {
 		return true;
@@ -58,7 +58,7 @@ export function decodeNumberEvent(event: DecoderEvent): number | bigint {
 	if (event.eventData.eventType === "literal") {
 		if (isIntegerMajorType(event.eventData.majorType)) {
 			let number = decodeUint(event.eventData.data as Uint8Array);
-			if (event.eventData.majorType == MajorType.NegativeInteger) {
+			if (event.eventData.majorType == MajorTypes.NegativeInteger) {
 				if (typeof number === "bigint") {
 					number = -1n - number;
 				} else {
@@ -68,7 +68,7 @@ export function decodeNumberEvent(event: DecoderEvent): number | bigint {
 			return number;
 		}
 		if (
-			event.eventData.majorType === MajorType.SimpleValue &&
+			event.eventData.majorType === MajorTypes.SimpleValue &&
 			event.eventData.data instanceof Uint8Array
 		) {
 			return decodeFloat(event.eventData.data);

@@ -1,4 +1,4 @@
-import { MajorType } from "../common.ts";
+import { MajorTypes } from "../common.ts";
 import type { DecoderEvent } from "../mod.ts";
 import type { SimpleValueLiteralEventData } from "./events.ts";
 
@@ -27,7 +27,7 @@ export function isSimpleValueEvent<Event extends DecoderEvent>(
 	event: Event,
 ): event is Event & DecoderEvent<SimpleValueLiteralEventData> {
 	return event.eventData.eventType === "literal" &&
-		event.eventData.majorType === MajorType.SimpleValue &&
+		event.eventData.majorType === MajorTypes.SimpleValue &&
 		event.eventData.simpleValueType === "simple";
 }
 

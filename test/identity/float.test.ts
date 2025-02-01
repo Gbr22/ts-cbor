@@ -6,7 +6,6 @@ import {
 	type DecoderEvent,
 	decoderFromStream,
 	type FloatLiteralEventData,
-	MajorType,
 	writeFloat16,
 	writeFloat32,
 	writeFloat64,
@@ -19,6 +18,7 @@ import {
 } from "../../test_utils.ts";
 import { assertAlmostEquals } from "@std/assert/almost-equals";
 import { intoAsyncWriter } from "../../encoder.ts";
+import { MajorTypes } from "../../common.ts";
 
 async function floatTest(
 	writeFloat: (writer: AsyncWriter, value: number) => Promise<void>,
@@ -35,7 +35,7 @@ async function floatTest(
 	assertEquals(next.eventData.eventType, "literal", "Expect literal event");
 	assertEquals(
 		next.eventData.majorType,
-		MajorType.SimpleValue,
+		MajorTypes.SimpleValue,
 		"Expect SimpleValue major type",
 	);
 	assertEquals(

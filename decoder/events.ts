@@ -1,4 +1,4 @@
-import type { MajorType } from "../common.ts";
+import type { MajorType, MajorTypes } from "../common.ts";
 import type { DecoderLike, SyncDecoderLike } from "./common.ts";
 import { SyncDecoderSymbol } from "./common.ts";
 import type { AsyncDecoderLike } from "./common.ts";
@@ -11,65 +11,65 @@ export type LiteralEventData =
 	| TagLiteralEventData;
 export type TagLiteralEventData = {
 	eventType: "literal";
-	majorType: typeof MajorType["Tag"];
+	majorType: MajorTypes["Tag"];
 	data: Uint8Array;
 };
 export type SimpleValueLiteralEventData = {
 	eventType: "literal";
-	majorType: typeof MajorType["SimpleValue"];
+	majorType: MajorTypes["SimpleValue"];
 	simpleValueType: "simple";
 	data: number;
 };
 export type FloatLiteralEventData = {
 	eventType: "literal";
-	majorType: typeof MajorType["SimpleValue"];
+	majorType: MajorTypes["SimpleValue"];
 	simpleValueType: "float";
 	data: Uint8Array;
 };
 export type IntegerLiteralEventData = {
 	eventType: "literal";
 	majorType:
-		| typeof MajorType["NegativeInteger"]
-		| typeof MajorType["UnsignedInteger"]
-		| typeof MajorType["Tag"];
+		| MajorTypes["NegativeInteger"]
+		| MajorTypes["UnsignedInteger"]
+		| MajorTypes["Tag"];
 	data: Uint8Array;
 };
 export type StartEventData = {
 	eventType: "start";
 	length: number | bigint | undefined;
 	majorType:
-		| typeof MajorType["ByteString"]
-		| typeof MajorType["TextString"]
-		| typeof MajorType["Array"]
-		| typeof MajorType["Map"];
+		| MajorTypes["ByteString"]
+		| MajorTypes["TextString"]
+		| MajorTypes["Array"]
+		| MajorTypes["Map"];
 };
 export type StartArrayEventData = StartEventData & {
-	majorType: typeof MajorType["Array"];
+	majorType: MajorTypes["Array"];
 };
 export type StartMapEventData = StartEventData & {
-	majorType: typeof MajorType["Map"];
+	majorType: MajorTypes["Map"];
 };
 export type StartByteStringEventData = StartEventData & {
-	majorType: typeof MajorType["ByteString"];
+	majorType: MajorTypes["ByteString"];
 };
 export type StartTextStringEventData = StartEventData & {
-	majorType: typeof MajorType["TextString"];
+	majorType: MajorTypes["TextString"];
 };
 export type EndEventData = {
 	eventType: "end";
 	majorType:
-		| typeof MajorType["ByteString"]
-		| typeof MajorType["TextString"]
-		| typeof MajorType["Array"]
-		| typeof MajorType["Map"];
+		| MajorTypes["ByteString"]
+		| MajorTypes["TextString"]
+		| MajorTypes["Array"]
+		| MajorTypes["Map"];
 };
 export type DataEventData = {
 	eventType: "data";
-	majorType: typeof MajorType["ByteString"];
+	majorType: MajorTypes["ByteString"];
 	data: Uint8Array;
 } | {
 	eventType: "data";
-	majorType: typeof MajorType["TextString"];
+	majorType: MajorTypes["TextString"];
 	data: string;
 };
 

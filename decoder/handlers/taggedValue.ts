@@ -1,4 +1,4 @@
-import { MajorType, TaggedValue } from "../../common.ts";
+import { MajorTypes, TaggedValue } from "../../common.ts";
 import type { DecoderEvent, TagLiteralEventData } from "../events.ts";
 import { decodeUint } from "../numbers.ts";
 import type {
@@ -18,7 +18,7 @@ export function createTaggedValueDecodingHandler(
 	const handler = {
 		match(event: DecoderEvent): event is TagEvent {
 			return event.eventData.eventType === "literal" &&
-				event.eventData.majorType === MajorType.Tag &&
+				event.eventData.majorType === MajorTypes.Tag &&
 				matchTag(decodeUint(event.eventData.data));
 		},
 		handle(

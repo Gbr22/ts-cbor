@@ -137,4 +137,4 @@ export {
 	type StartMapEventData,
 	type StartTextStringEventData,
 } from "./decoder/events.ts";
-export { MajorType, TaggedValue } from "./common.ts";
+export { type MajorType, MajorTypes, TaggedValue } from "./common.ts";
