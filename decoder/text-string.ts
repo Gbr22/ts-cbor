@@ -4,7 +4,7 @@ import {
 	type AsyncDecoderLike,
 	AsyncDecoderSymbol,
 	type DecoderLike,
-	MapDecoderToIterableIterator,
+	type MapDecoderToIterableIterator,
 	Mode,
 	type ReaderState,
 	type SyncDecoderLike,

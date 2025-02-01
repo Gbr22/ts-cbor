@@ -120,7 +120,12 @@ export function isStartEvent<Filter extends MajorType | undefined = undefined>(
 
 export function bindIsStartEvent<
 	Filter extends MajorType | undefined = undefined,
->(filter: Filter) {
+>(filter: Filter): (
+	event: DecoderEvent,
+) => event is DecoderEvent<
+	DecoderLike,
+	StartEventData & { majorType: MapMajorTypeFilterToMajorType<Filter> }
+> {
 	return function (
 		event: DecoderEvent,
 	): event is DecoderEvent<
@@ -144,7 +149,12 @@ export function isEndEvent<Filter extends MajorType | undefined = undefined>(
 
 export function bindIsEndEvent<
 	Filter extends MajorType | undefined = undefined,
->(filter: Filter) {
+>(filter: Filter): (
+	event: DecoderEvent,
+) => event is DecoderEvent<
+	DecoderLike,
+	EndEventData & { majorType: MapMajorTypeFilterToMajorType<Filter> }
+> {
 	return function (
 		event: DecoderEvent,
 	): event is DecoderEvent<

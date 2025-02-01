@@ -3,7 +3,7 @@ import {
 	type AsyncDecoderLike,
 	AsyncDecoderSymbol,
 	type DecoderLike,
-	MapDecoderToIterableIterator,
+	type MapDecoderToIterableIterator,
 	type MapDecoderToReturnType,
 	type SyncDecoder,
 	type SyncDecoderLike,

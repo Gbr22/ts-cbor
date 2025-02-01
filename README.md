@@ -34,9 +34,11 @@ for await (const event of events) {
 }
 ```
 
-Note: Multiple event iterators may exist simultaneously but events are only consumed once.
-For `consumeTextString` and `consumeByteString` you should reach the end of the string iterator before you continue to use an events iterator.
-If you consume an event an then attempt to continue consuming a text/byte string, the internal logic of the string consumption may break.
+Note: Multiple event iterators may exist simultaneously but events are only
+consumed once. For `consumeTextString` and `consumeByteString` you should reach
+the end of the string iterator before you continue to use an events iterator. If
+you consume an event an then attempt to continue consuming a text/byte string,
+the internal logic of the string consumption may break.
 
 Iterables and Async iterables will be serialized as indefinite length arrays by
 default.
@@ -91,4 +93,3 @@ export function writeAsyncIterable<Writer extends AnyWriter>(
 
 You may create your own `WriteFunction`, but there are plenty available in the
 package.
-
