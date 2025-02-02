@@ -1,7 +1,9 @@
 import type { ReaderState } from "./common.ts";
 import { flushHeaderAndArgument } from "./header.ts";
 
-export function handleReadingArgumentMode(state: ReaderState) {
+export function handleReadingArgumentMode(
+	state: ReaderState,
+) {
 	if (state.isReaderDone) {
 		throw new Error(
 			`Unexpected end of stream when ${state.numberOfBytesToRead} bytes are left to read`,

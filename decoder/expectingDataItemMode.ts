@@ -8,9 +8,12 @@ import {
 } from "./events.ts";
 import { flushHeaderAndArgument } from "./header.ts";
 import { serialize } from "../common.ts";
+import { handleReadingArgumentMode } from "./readingArgumentMode.ts";
 
 const reservedAddionalInfo = Object.freeze([28, 29, 30]);
-export function handleExpectingDataItemMode(state: ReaderState) {
+export function handleExpectingDataItemMode(
+	state: ReaderState,
+) {
 	if (state.isReaderDone) {
 		IterationControl.return();
 	}
@@ -22,11 +25,11 @@ export function handleExpectingDataItemMode(state: ReaderState) {
 	state.additionalInfo = byte & 0b11111;
 	state.numberValue = 0;
 	state.numberOfBytesToRead = 0;
-	state.argumentBytes = new Uint8Array();
 	state.isIndefinite = false;
 
 	if (state.additionalInfo < AdditionalInfo.Length1) {
 		state.numberValue = state.additionalInfo;
+		state.argumentBytes = new Uint8Array();
 		flushHeaderAndArgument(state);
 	}
 	if (state.additionalInfo == AdditionalInfo.Length1) {
@@ -56,26 +59,24 @@ export function handleExpectingDataItemMode(state: ReaderState) {
 		if (state.majorType == MajorTypes.ByteString) {
 			state.mode = Mode.ExpectingDataItem;
 			state.subMode = SubMode.ReadingIndefiniteByteString;
-			state.yieldEventData(
+			state.enqueueEventData(
 				{
 					eventType: DecoderEventTypes.Start,
 					length: undefined,
 					majorType: MajorTypes.ByteString,
 				} satisfies StartEventData,
 			);
-		}
-		if (state.majorType == MajorTypes.TextString) {
+		} else if (state.majorType == MajorTypes.TextString) {
 			state.mode = Mode.ExpectingDataItem;
 			state.subMode = SubMode.ReadingIndefiniteTextString;
-			state.yieldEventData(
+			state.enqueueEventData(
 				{
 					eventType: DecoderEventTypes.Start,
 					length: undefined,
 					majorType: MajorTypes.TextString,
 				} satisfies StartEventData,
 			);
-		}
-		if (state.majorType == MajorTypes.SimpleValue) {
+		} else if (state.majorType == MajorTypes.SimpleValue) {
 			state.mode = Mode.ExpectingDataItem;
 			if (state.subMode == SubMode.ReadingIndefiniteByteString) {
 				state.yieldEndOfDataItem(
@@ -84,16 +85,14 @@ export function handleExpectingDataItemMode(state: ReaderState) {
 						majorType: MajorTypes.ByteString,
 					} satisfies EndEventData,
 				);
-			}
-			if (state.subMode == SubMode.ReadingIndefiniteTextString) {
+			} else if (state.subMode == SubMode.ReadingIndefiniteTextString) {
 				state.yieldEndOfDataItem(
 					{
 						eventType: DecoderEventTypes.End,
 						majorType: MajorTypes.TextString,
 					} satisfies EndEventData,
 				);
-			}
-			if (
+			} else if (
 				state.itemsToRead.length > 0 &&
 				state.itemsToRead[state.itemsToRead.length - 1] === Infinity
 			) {
@@ -105,24 +104,34 @@ export function handleExpectingDataItemMode(state: ReaderState) {
 						majorType: type as EndEventData["majorType"],
 					} satisfies EndEventData,
 				);
+			} else {
+				throw new Error(`Unexpected stop code`);
 			}
-			throw new Error(`Unexpected stop code`);
-		}
-		if (
+		} else if (
 			state.majorType == MajorTypes.Array ||
 			state.majorType == MajorTypes.Map
 		) {
 			state.mode = Mode.ExpectingDataItem;
 			state.hierarchy.push(state.majorType);
 			state.itemsToRead.push(Infinity);
-			state.yieldEventData(
+			state.enqueueEventData(
 				{
 					eventType: DecoderEventTypes.Start,
 					length: undefined,
 					majorType: state.majorType,
 				} satisfies StartEventData,
 			);
+		} else {
+			throw new Error(
+				`Major Type ${state.majorType} cannot be isIndefinite`,
+			);
 		}
-		throw new Error(`Major Type ${state.majorType} cannot be isIndefinite`);
+	} else {
+		while (
+			state.numberOfBytesToRead > 0 &&
+			state.index < state.currentBuffer.length
+		) {
+			handleReadingArgumentMode(state);
+		}
 	}
 }

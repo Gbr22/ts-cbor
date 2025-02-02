@@ -1,11 +1,10 @@
-import { IterationControl } from "../iteration-control.ts";
 import type { ReaderState } from "./common.ts";
 import type { DecoderIterationState } from "./iterating.ts";
 
 export function refreshBuffer(
-	iterationState: DecoderIterationState,
 	state: ReaderState,
-) {
+	iterationState: DecoderIterationState,
+): boolean {
 	if (iterationState.pulled.length > 0) {
 		const result = iterationState.pulled.shift()!;
 		state.index = 0;
@@ -16,10 +15,11 @@ export function refreshBuffer(
 		} else {
 			state.currentBuffer = value;
 		}
-		return;
+		return false;
 	}
 	if (state.index >= state.currentBuffer.length && !state.isReaderDone) {
 		iterationState.pull();
-		IterationControl.continue();
+		return true;
 	}
+	return false;
 }

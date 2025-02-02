@@ -18,7 +18,7 @@ import {
 } from "./events.ts";
 import type { IteratorPullResult } from "./iterating.ts";
 
-export function handleByteStringData(state: ReaderState) {
+function checkStringEnd(state: ReaderState) {
 	if (state.byteArrayNumberOfBytesToRead <= 0) {
 		state.mode = Mode.ExpectingDataItem;
 		state.yieldEndOfDataItem(
@@ -33,18 +33,23 @@ export function handleByteStringData(state: ReaderState) {
 			`Unexpected end of stream while trying to read ${state.byteArrayNumberOfBytesToRead} more bytes for text string`,
 		);
 	}
+}
+
+export function handleByteStringData(state: ReaderState) {
+	checkStringEnd(state);
 	const to = state.index + state.byteArrayNumberOfBytesToRead;
 	const slice = state.currentBuffer.subarray(state.index, to);
 	state.index += state.byteArrayNumberOfBytesToRead;
 	state.byteArrayNumberOfBytesToRead -= slice.length;
 	if (slice.length > 0) {
-		state.yieldEventData(
+		state.enqueueEventData(
 			{
 				eventType: DecoderEventTypes.Data,
 				majorType: MajorTypes.ByteString,
 				data: slice,
 			} satisfies DataEventData,
 		);
+		checkStringEnd(state);
 	}
 }
 

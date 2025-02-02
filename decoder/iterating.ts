@@ -1,7 +1,6 @@
 import { IterationControl, type IterationState } from "../iteration-control.ts";
 import type { AnyIterable } from "../utils.ts";
 import { refreshBuffer } from "./buffer.ts";
-import { checkCollectionEnd } from "./collection.ts";
 import {
 	type AsyncDecoder,
 	AsyncDecoderSymbol,
@@ -17,26 +16,17 @@ import { handleExpectingDataItemMode } from "./expectingDataItemMode.ts";
 import { handleReadingArgumentMode } from "./readingArgumentMode.ts";
 import { handleReadingDataMode } from "./readingDataMode.ts";
 
-function handleDecoderIterationData(state: ReaderState) {
+function handleDecoderIterationData(
+	state: ReaderState,
+) {
 	if (state.mode == Mode.ReadingData) {
 		handleReadingDataMode(state);
-		return;
-	}
-	if (state.mode == Mode.ExpectingDataItem) {
+	} else if (state.mode == Mode.ExpectingDataItem) {
 		handleExpectingDataItemMode(state);
-		return;
-	}
-	if (state.mode == Mode.ReadingArgument) {
+	} else if (state.mode == Mode.ReadingArgument) {
 		handleReadingArgumentMode(state);
-		return;
-	}
-	throw new Error(`Unexpected mode ${state.mode} in ReaderState`);
-}
-
-function flushYieldQueue(state: ReaderState) {
-	if (state.yieldQueue.length > 0) {
-		const event = state.yieldQueue.pop()!;
-		IterationControl.yield<DecoderEvent>(event);
+	} else {
+		throw new Error(`Unexpected mode ${state.mode} in ReaderState`);
 	}
 }
 
@@ -57,17 +47,11 @@ function handleDecoderIteration(
 	readerState: ReaderState,
 	iterationState: DecoderIterationState,
 ) {
-	flushYieldQueue(readerState);
-	refreshBuffer(iterationState, readerState);
+	readerState.iterationState = iterationState;
+	if (refreshBuffer(readerState, iterationState)) {
+		return;
+	}
 	handleDecoderIterationData(readerState);
-}
-
-export function yieldEndOfDataItem<Event extends DecoderEvent>(
-	state: ReaderState,
-	event: Event,
-): never {
-	checkCollectionEnd(state);
-	IterationControl.yield<DecoderEvent>(event);
 }
 
 export function decoderFromIterable<I extends AnyIterable<Uint8Array>>(

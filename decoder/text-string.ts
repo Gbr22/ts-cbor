@@ -29,7 +29,7 @@ const utf8LengthMapping = [
 	[0b1111_1111, 0b1111_1111, 8],
 ];
 
-export function handleTextStringData(state: ReaderState) {
+function checkStringEnd(state: ReaderState) {
 	if (state.byteArrayNumberOfBytesToRead <= 0) {
 		state.mode = Mode.ExpectingDataItem;
 		if (state.unsafeTextSlice && state.unsafeTextSlice.length > 0) {
@@ -51,6 +51,10 @@ export function handleTextStringData(state: ReaderState) {
 			`Unexpected end of stream when ${state.byteArrayNumberOfBytesToRead} bytes are left to read`,
 		);
 	}
+}
+
+export function handleTextStringData(state: ReaderState) {
+	checkStringEnd(state);
 	let fromIndex = state.index;
 	let toIndex = Math.min(
 		state.index + state.byteArrayNumberOfBytesToRead,
@@ -118,13 +122,14 @@ export function handleTextStringData(state: ReaderState) {
 		const data = new TextDecoder("UTF-8", { "fatal": true }).decode(
 			safeSlice,
 		);
-		state.yieldEventData(
+		state.enqueueEventData(
 			{
 				eventType: DecoderEventTypes.Data,
 				majorType: MajorTypes.TextString,
 				data,
 			} satisfies DataEventData,
 		);
+		checkStringEnd(state);
 	}
 }
 

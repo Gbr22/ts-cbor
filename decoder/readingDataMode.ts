@@ -3,16 +3,16 @@ import { handleByteStringData } from "./byte-string.ts";
 import type { ReaderState } from "./common.ts";
 import { handleTextStringData } from "./text-string.ts";
 
-export function handleReadingDataMode(state: ReaderState) {
+export function handleReadingDataMode(
+	state: ReaderState,
+) {
 	if (state.majorType == MajorTypes.ByteString) {
 		handleByteStringData(state);
-		return;
-	}
-	if (state.majorType == MajorTypes.TextString) {
+	} else if (state.majorType == MajorTypes.TextString) {
 		handleTextStringData(state);
-		return;
+	} else {
+		throw new Error(
+			`Invalid major type ${state.majorType} in reading data mode`,
+		);
 	}
-	throw new Error(
-		`Invalid major type ${state.majorType} in reading data mode`,
-	);
 }

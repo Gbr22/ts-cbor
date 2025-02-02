@@ -1,11 +1,11 @@
-import { IterationControl } from "../iteration-control.ts";
 import type { AnyIterable } from "../utils.ts";
+import { checkCollectionEnd } from "./collection.ts";
 import {
 	type DecoderEvent,
 	type DecoderEventData,
 	wrapEventData,
 } from "./events.ts";
-import { yieldEndOfDataItem } from "./iterating.ts";
+import type { DecoderIterationState } from "./iterating.ts";
 
 export type DecoderEventsAsync = AsyncIterableIterator<DecoderEvent>;
 export type DecoderEventsSync = IterableIterator<DecoderEvent>;
@@ -83,10 +83,9 @@ export type ReaderState = {
 	unsafeTextSlice: Uint8Array | null;
 	itemsToRead: (number | bigint)[];
 	hierarchy: number[];
-	yieldQueue: DecoderEvent[];
-	yieldEventData: (data: DecoderEventData) => never;
+	iterationState: DecoderIterationState;
 	enqueueEventData: (data: DecoderEventData) => void;
-	yieldEndOfDataItem: (data: DecoderEventData) => never;
+	yieldEndOfDataItem: (data: DecoderEventData) => void;
 };
 
 export function createReaderState(): ReaderState {
@@ -107,15 +106,13 @@ export function createReaderState(): ReaderState {
 		unsafeTextSlice: null,
 		itemsToRead: [],
 		hierarchy: [],
-		yieldQueue: [],
-		yieldEventData(data: DecoderEventData) {
-			return IterationControl.yield(wrapEventData(this.decoder!, data));
-		},
+		iterationState: undefined as unknown as DecoderIterationState,
 		enqueueEventData(data: DecoderEventData) {
-			this.yieldQueue.push(wrapEventData(this.decoder!, data));
+			this.iterationState.enqueue(wrapEventData(this.decoder!, data));
 		},
 		yieldEndOfDataItem(data: DecoderEventData) {
-			return yieldEndOfDataItem(this, wrapEventData(this.decoder!, data));
+			this.enqueueEventData(data);
+			checkCollectionEnd(this);
 		},
 	};
 }
