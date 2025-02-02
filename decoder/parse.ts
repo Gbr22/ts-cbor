@@ -10,17 +10,11 @@ import {
 	SyncDecoderSymbol,
 } from "./common.ts";
 import { serialize } from "../common.ts";
-import {
-	handlePullResult,
-	IterationControl,
-	pullFunction,
-	type PullFunctionArgs,
-	type PullFunctionIterationState,
-	type PullFunctionResult,
-} from "../iteration-control.ts";
+import { IterationControl } from "../iteration-control.ts";
 import { defaultDecodingHandlers } from "./handlers.ts";
 import { type DecoderEvent, DecoderEventTypes } from "./events.ts";
 import { decoderFromIterable } from "./iterating.ts";
+import type { IterationState } from "../iteration-control.ts";
 
 type DecoderStack = DecoderHandlerInstance[];
 
@@ -92,39 +86,37 @@ export function transformDecoder<Decoder extends DecoderLike>(
 		throw new Error("Decoder is neither sync nor async");
 	}
 	const next = it.next.bind(it);
-	type PullableFunctions = typeof next;
 
 	function iterate(
-		state: PullFunctionIterationState<unknown, PullableFunctions>,
+		state: IterationState<unknown, IteratorResult<DecoderEvent>>,
 	) {
-		handlePullResult(state.pulled);
-		if (state.pulled.length === 0) {
-			state.pull(next, [], (result) => {
-				const { done, value: event } = result;
-				if (done) {
-					if (stack.length > 0) {
-						throw new Error(
-							`Unexpected end of stream while stack is not empty: ${
-								serialize(stack)
-							}`,
-						);
-					}
-					IterationControl.return();
+		while (state.pulled.length > 0) {
+			const result = state.pulled.shift()!;
+			const { done, value: event } = result;
+			if (done) {
+				if (stack.length > 0) {
+					throw new Error(
+						`Unexpected end of stream while stack is not empty: ${
+							serialize(stack)
+						}`,
+					);
 				}
-				handleEvent(event);
-			});
+				IterationControl.return();
+			}
+			handleEvent(event);
 		}
+		state.pull();
 	}
 
 	if (SyncDecoderSymbol in decoder) {
 		return IterationControl
 			.createSyncIterator<
 				unknown,
-				PullFunctionResult<PullableFunctions>,
-				PullFunctionArgs<PullableFunctions>
+				IteratorResult<DecoderEvent>,
+				[]
 			>(
 				iterate,
-				pullFunction<PullableFunctions>,
+				next,
 			)[Symbol.iterator]() as MapDecoderToIterableIterator<
 				Decoder,
 				unknown,
@@ -136,11 +128,11 @@ export function transformDecoder<Decoder extends DecoderLike>(
 		return IterationControl
 			.createAsyncIterator<
 				unknown,
-				PullFunctionResult<PullableFunctions>,
-				PullFunctionArgs<PullableFunctions>
+				IteratorResult<DecoderEvent>,
+				[]
 			>(
 				iterate,
-				pullFunction<PullableFunctions>,
+				next,
 			)[Symbol.asyncIterator]() as MapDecoderToIterableIterator<
 				Decoder,
 				unknown,

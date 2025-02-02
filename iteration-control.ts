@@ -222,8 +222,6 @@ export function handlePullResult<Results extends PullFunctionResult<any>[]>(
 ) {
 	while (pulled.length > 0) {
 		const pulledItem = pulled.shift()!;
-		if (pulled) {
-			pulledItem[3](pulledItem[2]);
-		}
+		pulledItem[3](pulledItem[2]);
 	}
 }

@@ -34,7 +34,7 @@ export function handleByteStringData(state: ReaderState) {
 		);
 	}
 	const to = state.index + state.byteArrayNumberOfBytesToRead;
-	const slice = state.currentBuffer.slice(state.index, to);
+	const slice = state.currentBuffer.subarray(state.index, to);
 	state.index += state.byteArrayNumberOfBytesToRead;
 	state.byteArrayNumberOfBytesToRead -= slice.length;
 	if (slice.length > 0) {

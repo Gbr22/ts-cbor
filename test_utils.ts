@@ -90,7 +90,7 @@ export function bytesToStream(bytes: Uint8Array, bufferSize: number = 5) {
 	const count = bytes.length / bufferSize;
 	const it = function* () {
 		for (let i = 0; i < count; i++) {
-			yield bytes.slice(i * bufferSize, (i + 1) * bufferSize);
+			yield bytes.subarray(i * bufferSize, (i + 1) * bufferSize);
 		}
 	}();
 	return iterableToStream(it);

@@ -32,7 +32,7 @@ const utf8LengthMapping = [
 export function handleTextStringData(state: ReaderState) {
 	if (state.byteArrayNumberOfBytesToRead <= 0) {
 		state.mode = Mode.ExpectingDataItem;
-		if (state.unsafeTextSlice.length > 0) {
+		if (state.unsafeTextSlice && state.unsafeTextSlice.length > 0) {
 			throw new Error(
 				`Expected continuation of text string due to presence of incomplete UTF-8 sequence: ${
 					JSON.stringify([...state.unsafeTextSlice])
@@ -51,40 +51,54 @@ export function handleTextStringData(state: ReaderState) {
 			`Unexpected end of stream when ${state.byteArrayNumberOfBytesToRead} bytes are left to read`,
 		);
 	}
-	const toIndex = state.index + state.byteArrayNumberOfBytesToRead;
-	const currentBufferSlice = state.currentBuffer.slice(state.index, toIndex);
+	let fromIndex = state.index;
+	let toIndex = Math.min(
+		state.index + state.byteArrayNumberOfBytesToRead,
+		state.currentBuffer.length,
+	);
+	let len = toIndex - fromIndex;
+	let viewOf = state.currentBuffer;
 	state.index += state.byteArrayNumberOfBytesToRead;
-	state.byteArrayNumberOfBytesToRead -= currentBufferSlice.length;
-	let slice = currentBufferSlice;
-	if (state.unsafeTextSlice.length > 0) {
-		slice = new Uint8Array(
+	state.byteArrayNumberOfBytesToRead -= len;
+	if (state.unsafeTextSlice && state.unsafeTextSlice.length > 0) {
+		const currentBufferSlice = state.currentBuffer.subarray(
+			fromIndex,
+			toIndex,
+		);
+		const slice = new Uint8Array(
 			state.unsafeTextSlice.length + currentBufferSlice.length,
 		);
 		slice.set(state.unsafeTextSlice);
 		slice.set(currentBufferSlice, state.unsafeTextSlice.length);
-		state.unsafeTextSlice = new Uint8Array();
+		state.unsafeTextSlice = null;
+
+		fromIndex = 0;
+		toIndex = slice.length;
+		viewOf = slice;
+		len = toIndex - fromIndex;
 	}
-	if (slice.length > 0) {
-		const last = slice[slice.length - 1];
-		let safeSlice = slice;
+
+	if (len > 0) {
+		const last = viewOf[toIndex - 1];
+		let safeSlice: Uint8Array | undefined;
 		if ((last & 0b1000_0000) == 0b1000_0000 && !state.isReaderDone) {
-			let startByteIndex = slice.length - 1;
+			let startByteIndex = toIndex - 1;
 			let length = 0;
 			while (true) {
-				if (startByteIndex < 0) {
+				if (startByteIndex < fromIndex) {
 					throw new Error(
 						"Invalid UTF-8 sequence in text string, buffer underflow occurred while looking for start byte",
 					);
 				}
 				length++;
-				const currentByte = slice[startByteIndex];
+				const currentByte = viewOf[startByteIndex];
 				const isStartByte = (currentByte & 0b1100_0000) === 0b1100_0000;
 				if (isStartByte) {
 					break;
 				}
 				startByteIndex--;
 			}
-			const startByte = slice[startByteIndex];
+			const startByte = viewOf[startByteIndex];
 			let expectedLength = 0;
 			for (const [expected, mask, length] of utf8LengthMapping) {
 				if ((startByte & mask) === expected) {
@@ -93,19 +107,22 @@ export function handleTextStringData(state: ReaderState) {
 				}
 			}
 			if (expectedLength != length) {
-				safeSlice = slice.slice(0, startByteIndex);
-				const unsafeSlice = slice.slice(startByteIndex);
+				safeSlice = viewOf.subarray(fromIndex, startByteIndex);
+				const unsafeSlice = viewOf.subarray(startByteIndex, toIndex);
 				state.unsafeTextSlice = unsafeSlice;
 			}
 		}
-
+		if (safeSlice === undefined) {
+			safeSlice = viewOf.subarray(fromIndex, toIndex);
+		}
+		const data = new TextDecoder("UTF-8", { "fatal": true }).decode(
+			safeSlice,
+		);
 		state.yieldEventData(
 			{
 				eventType: DecoderEventTypes.Data,
 				majorType: MajorTypes.TextString,
-				data: new TextDecoder("UTF-8", { "fatal": true }).decode(
-					safeSlice,
-				),
+				data,
 			} satisfies DataEventData,
 		);
 	}

@@ -80,7 +80,7 @@ export type ReaderState = {
 	argumentBytes: Uint8Array;
 	isIndefinite: boolean;
 	byteArrayNumberOfBytesToRead: number;
-	unsafeTextSlice: Uint8Array;
+	unsafeTextSlice: Uint8Array | null;
 	itemsToRead: (number | bigint)[];
 	hierarchy: number[];
 	yieldQueue: DecoderEvent[];
@@ -104,7 +104,7 @@ export function createReaderState(): ReaderState {
 		argumentBytes: new Uint8Array(),
 		isIndefinite: false,
 		byteArrayNumberOfBytesToRead: 0,
-		unsafeTextSlice: new Uint8Array(),
+		unsafeTextSlice: null,
 		itemsToRead: [],
 		hierarchy: [],
 		yieldQueue: [],
