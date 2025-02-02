@@ -32,12 +32,12 @@ export const byteStringDecodingHandler: DecodingHandler<StartByteStringEvent> =
 					}
 					if (counter === 0) {
 						control.pop();
-						control.yield(concatBytes(...values));
+						return control.yield(concatBytes(...values));
 					}
 					if (event.eventData.eventType === DecoderEventTypes.Data) {
 						values.push(event.eventData.data);
 					}
-					control.continue();
+					return true;
 				},
 				onYield(value) {
 					throw new Error(

@@ -59,12 +59,12 @@ export function consumeByteString<Decoder extends DecoderLike>(
 	let counter = 1;
 
 	function handleIteration(
-		state: IterationState<string, IteratorPullResult<DecoderEvent>>,
+		state: IterationState<Uint8Array, IteratorPullResult<DecoderEvent>>,
 	) {
 		const result = state.pulled.shift();
 		if (!result) {
 			state.pull();
-			IterationControl.continue();
+			return;
 		}
 		const { done, value } = result;
 		if (done) {
@@ -85,10 +85,11 @@ export function consumeByteString<Decoder extends DecoderLike>(
 			counter--;
 		}
 		if (counter === 0) {
-			IterationControl.return();
+			state.return();
+			return;
 		}
 		if (value.eventData.eventType === DecoderEventTypes.Data) {
-			IterationControl.yield(value.eventData.data);
+			state.enqueue(value.eventData.data);
 		}
 	}
 
@@ -97,7 +98,7 @@ export function consumeByteString<Decoder extends DecoderLike>(
 		const pull = () =>
 			it.next() as Promise<IteratorPullResult<DecoderEvent>>;
 		return IterationControl.createAsyncIterator<
-			string,
+			Uint8Array,
 			IteratorPullResult<DecoderEvent>,
 			never[]
 		>(handleIteration, pull)[Symbol.asyncIterator]();
@@ -107,7 +108,7 @@ export function consumeByteString<Decoder extends DecoderLike>(
 		const it = d[SyncDecoderSymbol].events();
 		const pull = () => it.next() as IteratorPullResult<DecoderEvent>;
 		return IterationControl.createSyncIterator<
-			string,
+			Uint8Array,
 			IteratorPullResult<DecoderEvent>,
 			never[]
 		>(handleIteration, pull)[Symbol.iterator]();

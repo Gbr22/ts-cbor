@@ -30,7 +30,7 @@ export function createMapDecodingHandler(
 								"Unexpected end of map; expected a value for key",
 							);
 						}
-						control.yield(mapper(map));
+						return control.yield(mapper(map));
 					}
 				},
 				onYield(value) {

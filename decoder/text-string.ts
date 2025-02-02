@@ -144,7 +144,7 @@ export function consumeTextString<Decoder extends DecoderLike>(
 		const result = state.pulled.shift();
 		if (!result) {
 			state.pull();
-			IterationControl.continue();
+			return;
 		}
 		const { done, value } = result;
 		if (done) {
@@ -167,10 +167,12 @@ export function consumeTextString<Decoder extends DecoderLike>(
 			counter--;
 		}
 		if (counter === 0) {
-			IterationControl.return();
+			state.return();
+			return;
 		}
 		if (value.eventData.eventType === DecoderEventTypes.Data) {
-			IterationControl.yield(value.eventData.data);
+			state.enqueue(value.eventData.data);
+			return;
 		}
 	}
 

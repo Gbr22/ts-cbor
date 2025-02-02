@@ -31,12 +31,12 @@ export const textStringDecodingHandler: DecodingHandler<StartTextStringEvent> =
 					}
 					if (counter === 0) {
 						control.pop();
-						control.yield(values.join(""));
+						return control.yield(values.join(""));
 					}
 					if (event.eventData.eventType === DecoderEventTypes.Data) {
 						values.push(event.eventData.data);
 					}
-					control.continue();
+					return true;
 				},
 				onYield(value) {
 					throw new Error(

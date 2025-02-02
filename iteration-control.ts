@@ -8,10 +8,12 @@ export type IterationState<
 	Yield = unknown,
 	PullValue = unknown,
 	PullArgs extends any[] = never[],
+	Return = void,
 > = {
 	enqueue: (...values: Yield[]) => void;
 	pulled: PullValue[];
 	pull: (...args: PullArgs) => void;
+	return: (value: Return) => void;
 };
 export const IterationControlType = Object.freeze({
 	yield: 1,
@@ -57,7 +59,7 @@ export class IterationControl<Yield, Exit> {
 		Return = void,
 	>(
 		iterate: (
-			state: IterationState<Yield, PullValue, PullArgs>,
+			state: IterationState<Yield, PullValue, PullArgs, Return>,
 		) => Promise<void> | void,
 		pullFn: AsyncPullFn<PullValue, PullArgs> = (() => {}) as AsyncPullFn<
 			PullValue,
@@ -68,13 +70,17 @@ export class IterationControl<Yield, Exit> {
 		let returnValue: Return | undefined = undefined;
 		let hasReturn = false;
 		const pullQueue: PullArgs[] = [];
-		const state: IterationState<Yield, PullValue, PullArgs> = {
+		const state: IterationState<Yield, PullValue, PullArgs, Return> = {
 			enqueue: (...values: Yield[]) => {
 				queued.push(...values);
 			},
 			pulled: [],
 			pull: (...args) => {
 				pullQueue.push([...args] as PullArgs);
+			},
+			return: (value: Return) => {
+				returnValue = value;
+				hasReturn = true;
 			},
 		};
 		async function* generator(): AsyncIterableIterator<
@@ -124,7 +130,7 @@ export class IterationControl<Yield, Exit> {
 		Return = void,
 	>(
 		iterate: (
-			state: IterationState<Yield, PullValue, PullArgs>,
+			state: IterationState<Yield, PullValue, PullArgs, Return>,
 		) => Promise<void> | void,
 		pullFn:
 			| SyncPullFn<PullValue, PullArgs>
@@ -137,13 +143,17 @@ export class IterationControl<Yield, Exit> {
 		let returnValue: Return | undefined = undefined;
 		let hasReturn = false;
 		const pullQueue: PullArgs[] = [];
-		const state: IterationState<Yield, PullValue, PullArgs> = {
+		const state: IterationState<Yield, PullValue, PullArgs, Return> = {
 			enqueue: (...values: Yield[]) => {
 				queued.push(...values);
 			},
 			pulled: [],
 			pull: (...args) => {
 				pullQueue.push([...args] as PullArgs);
+			},
+			return: (value: Return) => {
+				returnValue = value;
+				hasReturn = true;
 			},
 		};
 		function* generator(): IterableIterator<Yield, Return, void> {

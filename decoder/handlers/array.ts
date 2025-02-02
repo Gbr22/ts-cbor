@@ -18,7 +18,7 @@ export const arrayDecodingHandler: DecodingHandler<StartArrayEvent> = {
 			onEvent(event) {
 				if (event.eventData.eventType === DecoderEventTypes.End) {
 					control.pop();
-					control.yield(values);
+					return control.yield(values);
 				}
 			},
 			onYield(value) {

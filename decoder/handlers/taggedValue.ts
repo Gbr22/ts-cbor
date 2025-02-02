@@ -32,7 +32,7 @@ export function createTaggedValueDecodingHandler(
 				onYield(value) {
 					taggedValue.value = value;
 					control.pop();
-					control.yield(mapper(taggedValue));
+					return control.yield(mapper(taggedValue));
 				},
 			} as DecoderHandlerInstance;
 		},

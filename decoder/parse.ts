@@ -19,17 +19,19 @@ import type { IterationState } from "../iteration-control.ts";
 type DecoderStack = DecoderHandlerInstance[];
 
 export type DecodingControl = {
-	yield(value: unknown): never;
+	yield(value: unknown): boolean;
 	pop(): void;
-	continue(): never;
 };
 export type DecoderHandlerInstance = {
 	onYield(value: unknown): void;
-	onEvent(event: DecoderEvent): void;
+	onEvent(event: DecoderEvent): boolean | undefined;
 };
 export type DecodingHandler<E extends DecoderEvent = DecoderEvent> = {
 	match(event: DecoderEvent): event is E;
-	handle(control: DecodingControl, event: E): void | DecoderHandlerInstance;
+	handle(
+		control: DecodingControl,
+		event: E,
+	): boolean | DecoderHandlerInstance;
 };
 
 export function transformDecoder<Decoder extends DecoderLike>(
@@ -38,38 +40,31 @@ export function transformDecoder<Decoder extends DecoderLike>(
 ): MapDecoderToIterableIterator<Decoder, unknown, void, void> {
 	const stack: DecoderStack = [];
 
-	function yieldValue(y: unknown): never {
+	function handleEvent(
+		state: IterationState<unknown, IteratorResult<DecoderEvent>>,
+		control: DecodingControl,
+		event: DecoderEvent,
+	) {
 		if (stack.length > 0) {
-			(stack[stack.length - 1] as DecoderHandlerInstance).onYield(y);
-			IterationControl.continue();
-		}
-		IterationControl.yield(y);
-	}
-
-	const control: DecodingControl = {
-		yield: yieldValue,
-		pop() {
-			stack.pop();
-		},
-		continue(): never {
-			IterationControl.continue();
-		},
-	};
-
-	function handleEvent(event: DecoderEvent) {
-		if (stack.length > 0) {
-			(stack[stack.length - 1] as DecoderHandlerInstance).onEvent(event);
+			if (
+				(stack[stack.length - 1] as DecoderHandlerInstance).onEvent(
+					event,
+				)
+			) {
+				return;
+			}
 		}
 		if (event.eventData.eventType === DecoderEventTypes.End) {
-			IterationControl.return();
+			state.return();
+			return;
 		}
 		for (const handler of handlers) {
 			if (handler.match(event)) {
 				const result = handler.handle(control, event);
-				if (result) {
+				if (typeof result != "boolean") {
 					stack.push(result);
 				}
-				IterationControl.continue();
+				return;
 			}
 		}
 	}
@@ -90,6 +85,22 @@ export function transformDecoder<Decoder extends DecoderLike>(
 	function iterate(
 		state: IterationState<unknown, IteratorResult<DecoderEvent>>,
 	) {
+		const control: DecodingControl = {
+			yield(y: unknown): boolean {
+				if (stack.length > 0) {
+					(stack[stack.length - 1] as DecoderHandlerInstance).onYield(
+						y,
+					);
+					return true;
+				}
+				state.enqueue(y);
+				return false;
+			},
+			pop() {
+				stack.pop();
+			},
+		};
+
 		while (state.pulled.length > 0) {
 			const result = state.pulled.shift()!;
 			const { done, value: event } = result;
@@ -101,9 +112,10 @@ export function transformDecoder<Decoder extends DecoderLike>(
 						}`,
 					);
 				}
-				IterationControl.return();
+				state.return();
+				return;
 			}
-			handleEvent(event);
+			handleEvent(state, control, event);
 		}
 		state.pull();
 	}

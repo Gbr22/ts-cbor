@@ -1,5 +1,4 @@
 import { AdditionalInfo, MajorTypes } from "../common.ts";
-import { IterationControl } from "../iteration-control.ts";
 import { Mode, type ReaderState, SubMode } from "./common.ts";
 import {
 	DecoderEventTypes,
@@ -15,7 +14,8 @@ export function handleExpectingDataItemMode(
 	state: ReaderState,
 ) {
 	if (state.isReaderDone) {
-		IterationControl.return();
+		state.iterationState.return();
+		return;
 	}
 	const byte = state.currentBuffer[state.index];
 	state.index++;
