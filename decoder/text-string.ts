@@ -140,11 +140,10 @@ export function consumeTextString<Decoder extends DecoderLike>(
 
 	function handleIteration(
 		state: IterationState<string, IteratorPullResult<DecoderEvent>>,
-	) {
+	): Promise<void> | void {
 		const result = state.pulled.shift();
 		if (!result) {
-			state.pull();
-			return;
+			return state.pull();
 		}
 		const { done, value } = result;
 		if (done) {
@@ -180,7 +179,7 @@ export function consumeTextString<Decoder extends DecoderLike>(
 		const it = d[AsyncDecoderSymbol].events();
 		const pull = () =>
 			it.next() as Promise<IteratorPullResult<DecoderEvent>>;
-		return IterationControl.createAsyncIterator<
+		return IterationControl.createReadableStream<
 			string,
 			IteratorPullResult<DecoderEvent>,
 			never[]

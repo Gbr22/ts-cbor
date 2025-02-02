@@ -26,6 +26,7 @@ export type DecoderLike = AsyncDecoderLike | SyncDecoderLike;
 
 export interface AsyncDecoder {
 	events(): DecoderEventsAsync;
+	eventStream(): ReadableStream<DecoderEvent>;
 	[AsyncDecoderSymbol]: AsyncDecoder;
 }
 

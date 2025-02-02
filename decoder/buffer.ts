@@ -4,7 +4,7 @@ import type { DecoderIterationState } from "./iterating.ts";
 export function refreshBuffer(
 	state: ReaderState,
 	iterationState: DecoderIterationState,
-): boolean {
+): Promise<void> | boolean {
 	if (iterationState.pulled.length > 0) {
 		const result = iterationState.pulled.shift()!;
 		state.index = 0;
@@ -18,8 +18,7 @@ export function refreshBuffer(
 		return false;
 	}
 	if (state.index >= state.currentBuffer.length && !state.isReaderDone) {
-		iterationState.pull();
-		return true;
+		return iterationState.pull() || true;
 	}
 	return false;
 }

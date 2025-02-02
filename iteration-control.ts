@@ -12,7 +12,7 @@ export type IterationState<
 > = {
 	enqueue: (...values: Yield[]) => void;
 	pulled: PullValue[];
-	pull: (...args: PullArgs) => void;
+	pull: (...args: PullArgs) => Promise<void> | void;
 	return: (value: Return) => void;
 };
 export const IterationControlType = Object.freeze({
@@ -34,93 +34,50 @@ export class IterationControl<Yield, Exit> {
 		this.value = value;
 	}
 
-	static yield<Yield, Exit = void>(...values: Yield[]): never {
-		throw new IterationControl<Yield, Exit>(
-			IterationControlType.yield,
-			values,
-		);
-	}
-	static return<Yeild, Exit>(): never;
-	static return<Yeild, Exit>(value: Exit): never;
-	static return<Yeild, Exit>(value?: Exit | undefined): never {
-		throw new IterationControl<Yeild, Exit>(
-			IterationControlType.return,
-			value,
-		);
-	}
-	static continue<Yeild, Exit>(): never {
-		throw new IterationControl<Yeild, Exit>(IterationControlType.continue);
-	}
-
-	static createAsyncIterator<
+	static createReadableStream<
 		Yield,
 		PullValue = unknown,
 		PullArgs extends any[] = never[],
-		Return = void,
 	>(
 		iterate: (
-			state: IterationState<Yield, PullValue, PullArgs, Return>,
-		) => Promise<void> | void,
+			state: IterationState<Yield, PullValue, PullArgs, void>,
+		) => Promise<void> | unknown,
 		pullFn: AsyncPullFn<PullValue, PullArgs> = (() => {}) as AsyncPullFn<
 			PullValue,
 			PullArgs
 		>,
-	): AsyncIterableIterator<Yield, Return, void> {
-		const queued: Yield[] = [];
-		let returnValue: Return | undefined = undefined;
+	): ReadableStream<Yield> {
+		let state: IterationState<Yield, PullValue, PullArgs, void>;
 		let hasReturn = false;
-		const pullQueue: PullArgs[] = [];
-		const state: IterationState<Yield, PullValue, PullArgs, Return> = {
-			enqueue: (...values: Yield[]) => {
-				queued.push(...values);
+		let enqueuedCount = 0;
+		return new ReadableStream({
+			start(controller) {
+				state = {
+					enqueue: (...values: Yield[]) => {
+						controller.enqueue(...values);
+						enqueuedCount++;
+					},
+					pulled: [],
+					pull: async (...args) => {
+						state.pulled.push(await pullFn(...args));
+					},
+					return: () => {
+						hasReturn = true;
+						controller.close();
+					},
+				};
 			},
-			pulled: [],
-			pull: (...args) => {
-				pullQueue.push([...args] as PullArgs);
-			},
-			return: (value: Return) => {
-				returnValue = value;
-				hasReturn = true;
-			},
-		};
-		async function* generator(): AsyncIterableIterator<
-			Yield,
-			Return,
-			void
-		> {
-			while (true) {
-				if (queued.length > 0) {
-					const first = queued.shift()!;
-					yield first;
-					continue;
-				}
-				if (hasReturn) {
-					return returnValue as Return;
-				}
-				while (pullQueue.length > 0) {
-					const args = pullQueue.shift()!;
-					const result = await pullFn(...args);
-					state.pulled.push(result);
-				}
-				try {
-					await iterate(state);
-				} catch (result) {
-					if (result instanceof IterationControl) {
-						if (result.type === IterationControlType.yield) {
-							queued.push(...result.value);
-						}
-						if (result.type === IterationControlType.return) {
-							hasReturn = true;
-							returnValue = result.value as Return;
-						}
-						continue;
+			async pull(controller) {
+				const startCount = enqueuedCount;
+				while (startCount === enqueuedCount) {
+					if (hasReturn) {
+						controller.close();
+						return;
 					}
-					throw result;
+					await iterate(state);
 				}
-			}
-		}
-
-		return generator();
+			},
+		});
 	}
 
 	static createSyncIterator<
@@ -131,7 +88,7 @@ export class IterationControl<Yield, Exit> {
 	>(
 		iterate: (
 			state: IterationState<Yield, PullValue, PullArgs, Return>,
-		) => Promise<void> | void,
+		) => Promise<void> | unknown,
 		pullFn:
 			| SyncPullFn<PullValue, PullArgs>
 			| AsyncPullFn<PullValue, PullArgs> = (() => {}) as SyncPullFn<

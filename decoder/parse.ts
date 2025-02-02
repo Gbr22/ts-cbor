@@ -84,7 +84,7 @@ export function transformDecoder<Decoder extends DecoderLike>(
 
 	function iterate(
 		state: IterationState<unknown, IteratorResult<DecoderEvent>>,
-	) {
+	): Promise<void> | void {
 		const control: DecodingControl = {
 			yield(y: unknown): boolean {
 				if (stack.length > 0) {
@@ -117,7 +117,7 @@ export function transformDecoder<Decoder extends DecoderLike>(
 			}
 			handleEvent(state, control, event);
 		}
-		state.pull();
+		return state.pull();
 	}
 
 	if (SyncDecoderSymbol in decoder) {
@@ -138,7 +138,7 @@ export function transformDecoder<Decoder extends DecoderLike>(
 	}
 	if (AsyncDecoderSymbol in decoder) {
 		return IterationControl
-			.createAsyncIterator<
+			.createReadableStream<
 				unknown,
 				IteratorResult<DecoderEvent>,
 				[]

@@ -5,6 +5,8 @@ import {
 	type AsyncDecoder,
 	AsyncDecoderSymbol,
 	createReaderState,
+	type DecoderEventsAsync,
+	type DecoderEventsSync,
 	type MapIterableToDecoder,
 	Mode,
 	type ReaderState,
@@ -46,10 +48,11 @@ export type DecoderIterationState = IterationState<
 function handleDecoderIteration(
 	readerState: ReaderState,
 	iterationState: DecoderIterationState,
-) {
+): Promise<void> | boolean | void {
 	readerState.iterationState = iterationState;
-	if (refreshBuffer(readerState, iterationState)) {
-		return;
+	const pull = refreshBuffer(readerState, iterationState);
+	if (pull) {
+		return pull;
 	}
 	handleDecoderIterationData(readerState);
 }
@@ -61,13 +64,17 @@ export function decoderFromIterable<I extends AnyIterable<Uint8Array>>(
 	if (Symbol.iterator in iterable) {
 		const it = iterable[Symbol.iterator]();
 		const pull = it.next.bind(it) as () => IteratorPullResult<Uint8Array>;
+		let iterator: DecoderEventsSync | undefined;
 		const events = () => {
-			return IterationControl.createSyncIterator<
-				DecoderEvent,
-				IteratorPullResult<Uint8Array>,
-				never[]
-			>(handleDecoderIteration.bind(null, readerState), pull)
-				[Symbol.iterator]();
+			if (!iterator) {
+				iterator = IterationControl.createSyncIterator<
+					DecoderEvent,
+					IteratorPullResult<Uint8Array>,
+					never[]
+				>(handleDecoderIteration.bind(null, readerState), pull)
+					[Symbol.iterator]();
+			}
+			return iterator;
 		};
 		const decoder: SyncDecoder = {
 			events,
@@ -82,16 +89,27 @@ export function decoderFromIterable<I extends AnyIterable<Uint8Array>>(
 		const pull = it.next.bind(it) as () => Promise<
 			IteratorPullResult<Uint8Array>
 		>;
+		let iterator: DecoderEventsAsync | undefined;
+		let stream: ReadableStream<DecoderEvent> | undefined;
+		const eventStream = () => {
+			if (!stream) {
+				stream = IterationControl.createReadableStream<
+					DecoderEvent,
+					IteratorPullResult<Uint8Array>,
+					never[]
+				>(handleDecoderIteration.bind(null, readerState), pull);
+			}
+			return stream;
+		};
 		const events = () => {
-			return IterationControl.createAsyncIterator<
-				DecoderEvent,
-				IteratorPullResult<Uint8Array>,
-				never[]
-			>(handleDecoderIteration.bind(null, readerState), pull)
-				[Symbol.asyncIterator]();
+			if (!iterator) {
+				iterator = eventStream()[Symbol.asyncIterator]();
+			}
+			return iterator;
 		};
 		const decoder: AsyncDecoder = {
 			events,
+			eventStream,
 			[AsyncDecoderSymbol]: undefined as unknown as AsyncDecoder,
 		};
 		decoder[AsyncDecoderSymbol] = decoder;
