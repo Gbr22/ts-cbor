@@ -14,9 +14,17 @@ import type {
 export const byteStringDecodingHandler: DecodingHandler<StartByteStringEvent> =
 	{
 		match: bindIsStartEvent(MajorTypes.ByteString),
-		handle(control: DecodingControl): DecoderHandlerInstance {
+		handle(
+			control: DecodingControl,
+			startEvent: StartByteStringEvent,
+		): DecoderHandlerInstance {
 			const values: Uint8Array[] = [];
+			const bytes = startEvent.eventData.length
+				? new Uint8Array(Number(startEvent.eventData.length))
+				: null;
+			let index = 0;
 			let counter = 1;
+
 			return {
 				onEvent(event) {
 					if (event.eventData.majorType != MajorTypes.ByteString) {
@@ -32,10 +40,18 @@ export const byteStringDecodingHandler: DecodingHandler<StartByteStringEvent> =
 					}
 					if (counter === 0) {
 						control.pop();
+						if (bytes) {
+							return control.yield(bytes);
+						}
 						return control.yield(concatBytes(...values));
 					}
 					if (event.eventData.eventType === DecoderEventTypes.Data) {
-						values.push(event.eventData.data);
+						if (bytes) {
+							bytes.set(event.eventData.data, index);
+							index += event.eventData.data.length;
+						} else {
+							values.push(event.eventData.data);
+						}
 					}
 					return true;
 				},

@@ -12,8 +12,14 @@ import type {
 
 export const arrayDecodingHandler: DecodingHandler<StartArrayEvent> = {
 	match: bindIsStartEvent(MajorTypes.Array),
-	handle(control: DecodingControl): DecoderHandlerInstance {
-		const values: unknown[] = [];
+	handle(
+		control: DecodingControl,
+		event: StartArrayEvent,
+	): DecoderHandlerInstance {
+		const values: unknown[] = new Array(
+			Number(event.eventData.length || 0),
+		);
+		let index = 0;
 		return {
 			onEvent(event) {
 				if (event.eventData.eventType === DecoderEventTypes.End) {
@@ -22,7 +28,7 @@ export const arrayDecodingHandler: DecodingHandler<StartArrayEvent> = {
 				}
 			},
 			onYield(value) {
-				values.push(value);
+				values[index++] = value;
 			},
 		} as DecoderHandlerInstance;
 	},

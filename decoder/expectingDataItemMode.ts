@@ -17,7 +17,7 @@ export function handleExpectingDataItemMode(
 		state.iterationState.return();
 		return;
 	}
-	
+
 	const byte = state.currentBuffer[state.index];
 
 	if (byte === BREAK_BYTE) {

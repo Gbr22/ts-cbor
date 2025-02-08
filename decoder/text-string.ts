@@ -139,7 +139,7 @@ export function consumeTextString<Decoder extends DecoderLike>(
 	function handleIteration(
 		state: IterationState<string, IteratorPullResult<DecoderEvent>>,
 	) {
-		return state.pull(result => {
+		return state.pull((result) => {
 			const { done, value } = result;
 			if (done) {
 				throw new Error(

@@ -14,8 +14,15 @@ import type {
 export const textStringDecodingHandler: DecodingHandler<StartTextStringEvent> =
 	{
 		match: bindIsStartEvent(MajorTypes.TextString),
-		handle(control: DecodingControl): DecoderHandlerInstance {
-			const bytes: Uint8Array[] = [];
+		handle(
+			control: DecodingControl,
+			startEvent: StartTextStringEvent,
+		): DecoderHandlerInstance {
+			const values: Uint8Array[] = [];
+			const bytes = startEvent.eventData.length
+				? new Uint8Array(Number(startEvent.eventData.length))
+				: null;
+			let index = 0;
 			let counter = 1;
 			return {
 				onEvent(event) {
@@ -34,12 +41,17 @@ export const textStringDecodingHandler: DecodingHandler<StartTextStringEvent> =
 						control.pop();
 						return control.yield(
 							new TextDecoder("UTF-8", { "fatal": true }).decode(
-								concatBytes(...bytes),
+								bytes ? bytes : concatBytes(...values),
 							),
 						);
 					}
 					if (event.eventData.eventType === DecoderEventTypes.Data) {
-						bytes.push(event.eventData.data);
+						if (bytes) {
+							bytes.set(event.eventData.data, index);
+							index += event.eventData.data.length;
+						} else {
+							values.push(event.eventData.data);
+						}
 					}
 					return true;
 				},

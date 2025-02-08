@@ -61,7 +61,7 @@ export function consumeByteString<Decoder extends DecoderLike>(
 	function handleIteration(
 		state: IterationState<Uint8Array, IteratorPullResult<DecoderEvent>>,
 	) {
-		return state.pull(result=>{
+		return state.pull((result) => {
 			const { done, value } = result;
 			if (done) {
 				throw new Error(

@@ -17,8 +17,12 @@ export function createMapDecodingHandler(
 ): DecodingHandler<StartMapEvent> {
 	const handler = {
 		match: bindIsStartEvent(MajorTypes.Map),
-		handle(control: DecodingControl): DecoderHandlerInstance {
-			const map: MapData = [];
+		handle(
+			control: DecodingControl,
+			event: StartMapEvent,
+		): DecoderHandlerInstance {
+			const map: MapData = new Array(Number(event.eventData.length || 0));
+			let index = 0;
 			let hasKey = false;
 			let key: unknown | undefined = undefined;
 			return {
@@ -39,7 +43,7 @@ export function createMapDecodingHandler(
 						hasKey = true;
 						return;
 					}
-					map.push([key, value]);
+					map[index++] = [key, value];
 					hasKey = false;
 				},
 			} as DecoderHandlerInstance;
