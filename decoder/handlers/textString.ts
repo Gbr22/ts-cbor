@@ -1,4 +1,5 @@
 import { MajorTypes, serialize } from "../../common.ts";
+import { concatBytes } from "../../utils.ts";
 import {
 	bindIsStartEvent,
 	DecoderEventTypes,
@@ -14,7 +15,7 @@ export const textStringDecodingHandler: DecodingHandler<StartTextStringEvent> =
 	{
 		match: bindIsStartEvent(MajorTypes.TextString),
 		handle(control: DecodingControl): DecoderHandlerInstance {
-			const values: string[] = [];
+			const bytes: Uint8Array[] = [];
 			let counter = 1;
 			return {
 				onEvent(event) {
@@ -31,10 +32,14 @@ export const textStringDecodingHandler: DecodingHandler<StartTextStringEvent> =
 					}
 					if (counter === 0) {
 						control.pop();
-						return control.yield(values.join(""));
+						return control.yield(
+							new TextDecoder("UTF-8", { "fatal": true }).decode(
+								concatBytes(...bytes),
+							),
+						);
 					}
 					if (event.eventData.eventType === DecoderEventTypes.Data) {
-						values.push(event.eventData.data);
+						bytes.push(event.eventData.data);
 					}
 					return true;
 				},

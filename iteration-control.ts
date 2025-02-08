@@ -85,7 +85,7 @@ export class IterationControl<Yield, Exit> {
 					state.pulled.push(result);
 				}
 				pullQueue.length = 0;
-				
+
 				await iterate(state);
 			}
 		}
@@ -132,7 +132,7 @@ export class IterationControl<Yield, Exit> {
 					yield value;
 				}
 				queued.length = 0;
-				
+
 				if (hasReturn) {
 					return returnValue as Return;
 				}
@@ -147,7 +147,7 @@ export class IterationControl<Yield, Exit> {
 					state.pulled.push(result);
 				}
 				pullQueue.length = 0;
-				
+
 				iterate(state);
 			}
 		}

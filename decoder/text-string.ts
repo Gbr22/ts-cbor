@@ -119,14 +119,12 @@ export function handleTextStringData(state: ReaderState) {
 		if (safeSlice === undefined) {
 			safeSlice = viewOf.subarray(fromIndex, toIndex);
 		}
-		const data = new TextDecoder("UTF-8", { "fatal": true }).decode(
-			safeSlice,
-		);
+
 		state.enqueueEventData(
 			{
 				eventType: DecoderEventTypes.Data,
 				majorType: MajorTypes.TextString,
-				data,
+				data: safeSlice,
 			} satisfies DataEventData,
 		);
 		checkStringEnd(state);
@@ -171,7 +169,10 @@ export function consumeTextString<Decoder extends DecoderLike>(
 			return;
 		}
 		if (value.eventData.eventType === DecoderEventTypes.Data) {
-			state.enqueue(value.eventData.data);
+			const data = new TextDecoder("UTF-8", { "fatal": true }).decode(
+				value.eventData.data,
+			);
+			state.enqueue(data);
 			return;
 		}
 	}

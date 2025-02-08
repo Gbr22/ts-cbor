@@ -120,7 +120,7 @@ export type DataEventData<
 	} | {
 		eventType: DecoderEventTypes["Data"];
 		majorType: MajorTypes["TextString"];
-		data: string;
+		data: Uint8Array;
 	})
 	& {
 		majorType: T;
