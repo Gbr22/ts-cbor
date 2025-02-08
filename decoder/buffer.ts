@@ -6,7 +6,7 @@ export function refreshBuffer(
 	iterationState: DecoderIterationState,
 ): boolean | void | Promise<boolean | void> {
 	if (state.index >= state.currentBuffer.length && !state.isReaderDone) {
-		return iterationState.pullImmediate((result) => {
+		return iterationState.pull((result) => {
 			state.index = 0;
 			const { done, value } = result;
 			if (done) {

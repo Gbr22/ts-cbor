@@ -61,36 +61,33 @@ export function consumeByteString<Decoder extends DecoderLike>(
 	function handleIteration(
 		state: IterationState<Uint8Array, IteratorPullResult<DecoderEvent>>,
 	) {
-		const result = state.pulled.shift();
-		if (!result) {
-			state.pull();
-			return;
-		}
-		const { done, value } = result;
-		if (done) {
-			throw new Error(
-				`Unexpected end of stream. Depth counter: ${counter}`,
-			);
-		}
+		return state.pull(result=>{
+			const { done, value } = result;
+			if (done) {
+				throw new Error(
+					`Unexpected end of stream. Depth counter: ${counter}`,
+				);
+			}
 
-		if (value.eventData.majorType != MajorTypes.ByteString) {
-			throw new Error(
-				`Unexpected major type ${value.eventData.majorType} while reading byte string`,
-			);
-		}
-		if (value.eventData.eventType === DecoderEventTypes.Start) {
-			counter++;
-		}
-		if (value.eventData.eventType === DecoderEventTypes.End) {
-			counter--;
-		}
-		if (counter === 0) {
-			state.return();
-			return;
-		}
-		if (value.eventData.eventType === DecoderEventTypes.Data) {
-			state.enqueue(value.eventData.data);
-		}
+			if (value.eventData.majorType != MajorTypes.ByteString) {
+				throw new Error(
+					`Unexpected major type ${value.eventData.majorType} while reading byte string`,
+				);
+			}
+			if (value.eventData.eventType === DecoderEventTypes.Start) {
+				counter++;
+			}
+			if (value.eventData.eventType === DecoderEventTypes.End) {
+				counter--;
+			}
+			if (counter === 0) {
+				state.return();
+				return;
+			}
+			if (value.eventData.eventType === DecoderEventTypes.Data) {
+				state.enqueue(value.eventData.data);
+			}
+		});
 	}
 
 	function asyncImpl(d: AsyncDecoderLike) {

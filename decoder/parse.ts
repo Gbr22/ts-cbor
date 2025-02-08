@@ -101,7 +101,7 @@ export function transformDecoder<Decoder extends DecoderLike>(
 			},
 		};
 
-		return state.pullImmediate((result) => {
+		return state.pull((result) => {
 			const { done, value: event } = result;
 			if (done) {
 				if (stack.length > 0) {

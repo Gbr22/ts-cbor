@@ -12,8 +12,7 @@ export type IterationState<
 > = {
 	enqueue: (...values: Yield[]) => void;
 	pulled: PullValue[];
-	pull: (...args: PullArgs) => void;
-	pullImmediate: (
+	pull: (
 		fn: (value: PullValue) => void,
 		...args: PullArgs
 	) => Promise<void> | void;
@@ -55,16 +54,12 @@ export class IterationControl<Yield, Exit> {
 		const queued: Yield[] = [];
 		let returnValue: Return | undefined = undefined;
 		let hasReturn = false;
-		const pullQueue: PullArgs[] = [];
 		const state: IterationState<Yield, PullValue, PullArgs, Return> = {
 			enqueue: (...values: Yield[]) => {
 				queued.push(...values);
 			},
 			pulled: [],
-			pull: (...args) => {
-				pullQueue.push([...args] as PullArgs);
-			},
-			pullImmediate: async (fn, ...args) => {
+			pull: async (fn, ...args) => {
 				const result = await pullFn(...args);
 				fn(result);
 			},
@@ -87,12 +82,6 @@ export class IterationControl<Yield, Exit> {
 				if (hasReturn) {
 					return returnValue as Return;
 				}
-
-				for (const args of pullQueue) {
-					const result = await pullFn(...args);
-					state.pulled.push(result);
-				}
-				pullQueue.length = 0;
 
 				await iterate(state);
 			}
@@ -120,16 +109,12 @@ export class IterationControl<Yield, Exit> {
 		const queued: Yield[] = [];
 		let returnValue: Return | undefined = undefined;
 		let hasReturn = false;
-		const pullQueue: PullArgs[] = [];
 		const state: IterationState<Yield, PullValue, PullArgs, Return> = {
 			enqueue: (...values: Yield[]) => {
 				queued.push(...values);
 			},
 			pulled: [],
-			pull: (...args) => {
-				pullQueue.push([...args] as PullArgs);
-			},
-			pullImmediate: (fn, ...args) => {
+			pull: (fn, ...args) => {
 				const result = pullFn(...args);
 				if (result instanceof Promise) {
 					throw new Error(
@@ -153,17 +138,6 @@ export class IterationControl<Yield, Exit> {
 				if (hasReturn) {
 					return returnValue as Return;
 				}
-
-				for (const args of pullQueue) {
-					const result = pullFn(...args);
-					if (result instanceof Promise) {
-						throw new Error(
-							"Cannot use async pull function in sync iterator",
-						);
-					}
-					state.pulled.push(result);
-				}
-				pullQueue.length = 0;
 
 				iterate(state);
 			}

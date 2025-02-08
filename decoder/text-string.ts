@@ -139,42 +139,39 @@ export function consumeTextString<Decoder extends DecoderLike>(
 	function handleIteration(
 		state: IterationState<string, IteratorPullResult<DecoderEvent>>,
 	) {
-		const result = state.pulled.shift();
-		if (!result) {
-			state.pull();
-			return;
-		}
-		const { done, value } = result;
-		if (done) {
-			throw new Error(
-				`Unexpected end of stream. Depth counter: ${counter}`,
-			);
-		}
+		return state.pull(result => {
+			const { done, value } = result;
+			if (done) {
+				throw new Error(
+					`Unexpected end of stream. Depth counter: ${counter}`,
+				);
+			}
 
-		if (value.eventData.majorType != MajorTypes.TextString) {
-			throw new Error(
-				`Unexpected major type ${value.eventData.majorType} while reading text string event: ${
-					serialize(value)
-				}`,
-			);
-		}
-		if (value.eventData.eventType === DecoderEventTypes.Start) {
-			counter++;
-		}
-		if (value.eventData.eventType === DecoderEventTypes.End) {
-			counter--;
-		}
-		if (counter === 0) {
-			state.return();
-			return;
-		}
-		if (value.eventData.eventType === DecoderEventTypes.Data) {
-			const data = new TextDecoder("UTF-8", { "fatal": true }).decode(
-				value.eventData.data,
-			);
-			state.enqueue(data);
-			return;
-		}
+			if (value.eventData.majorType != MajorTypes.TextString) {
+				throw new Error(
+					`Unexpected major type ${value.eventData.majorType} while reading text string event: ${
+						serialize(value)
+					}`,
+				);
+			}
+			if (value.eventData.eventType === DecoderEventTypes.Start) {
+				counter++;
+			}
+			if (value.eventData.eventType === DecoderEventTypes.End) {
+				counter--;
+			}
+			if (counter === 0) {
+				state.return();
+				return;
+			}
+			if (value.eventData.eventType === DecoderEventTypes.Data) {
+				const data = new TextDecoder("UTF-8", { "fatal": true }).decode(
+					value.eventData.data,
+				);
+				state.enqueue(data);
+				return;
+			}
+		});
 	}
 
 	function asyncImpl(d: AsyncDecoderLike) {
