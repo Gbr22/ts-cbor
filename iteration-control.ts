@@ -34,24 +34,6 @@ export class IterationControl<Yield, Exit> {
 		this.value = value;
 	}
 
-	static yield<Yield, Exit = void>(...values: Yield[]): never {
-		throw new IterationControl<Yield, Exit>(
-			IterationControlType.yield,
-			values,
-		);
-	}
-	static return<Yeild, Exit>(): never;
-	static return<Yeild, Exit>(value: Exit): never;
-	static return<Yeild, Exit>(value?: Exit | undefined): never {
-		throw new IterationControl<Yeild, Exit>(
-			IterationControlType.return,
-			value,
-		);
-	}
-	static continue<Yeild, Exit>(): never {
-		throw new IterationControl<Yeild, Exit>(IterationControlType.continue);
-	}
-
 	static createAsyncIterator<
 		Yield,
 		PullValue = unknown,
@@ -89,34 +71,22 @@ export class IterationControl<Yield, Exit> {
 			void
 		> {
 			while (true) {
-				if (queued.length > 0) {
-					const first = queued.shift()!;
-					yield first;
-					continue;
+				for (const value of queued) {
+					yield value;
 				}
+				queued.length = 0;
+
 				if (hasReturn) {
 					return returnValue as Return;
 				}
-				while (pullQueue.length > 0) {
-					const args = pullQueue.shift()!;
+
+				for (const args of pullQueue) {
 					const result = await pullFn(...args);
 					state.pulled.push(result);
 				}
-				try {
-					await iterate(state);
-				} catch (result) {
-					if (result instanceof IterationControl) {
-						if (result.type === IterationControlType.yield) {
-							queued.push(...result.value);
-						}
-						if (result.type === IterationControlType.return) {
-							hasReturn = true;
-							returnValue = result.value as Return;
-						}
-						continue;
-					}
-					throw result;
-				}
+				pullQueue.length = 0;
+				
+				await iterate(state);
 			}
 		}
 
@@ -158,16 +128,16 @@ export class IterationControl<Yield, Exit> {
 		};
 		function* generator(): IterableIterator<Yield, Return, void> {
 			while (true) {
-				if (queued.length > 0) {
-					const first = queued.shift()!;
-					yield first;
-					continue;
+				for (const value of queued) {
+					yield value;
 				}
+				queued.length = 0;
+				
 				if (hasReturn) {
 					return returnValue as Return;
 				}
-				while (pullQueue.length > 0) {
-					const args = pullQueue.shift()!;
+
+				for (const args of pullQueue) {
 					const result = pullFn(...args);
 					if (result instanceof Promise) {
 						throw new Error(
@@ -176,21 +146,9 @@ export class IterationControl<Yield, Exit> {
 					}
 					state.pulled.push(result);
 				}
-				try {
-					iterate(state);
-				} catch (result) {
-					if (result instanceof IterationControl) {
-						if (result.type === IterationControlType.yield) {
-							queued.push(...result.value);
-						}
-						if (result.type === IterationControlType.return) {
-							hasReturn = true;
-							returnValue = result.value as Return;
-						}
-						continue;
-					}
-					throw result;
-				}
+				pullQueue.length = 0;
+				
+				iterate(state);
 			}
 		}
 
