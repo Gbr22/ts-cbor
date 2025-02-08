@@ -6,10 +6,10 @@ import {
 	type StartEventData,
 } from "./events.ts";
 import { flushHeaderAndArgument } from "./header.ts";
-import { serialize } from "../common.ts";
 import { handleReadingArgumentMode } from "./readingArgumentMode.ts";
 
-const reservedAddionalInfo = Object.freeze([28, 29, 30]);
+const RESERVED_MIN = 28;
+const RESERVED_MAX = 30;
 export function handleExpectingDataItemMode(
 	state: ReaderState,
 ) {
@@ -17,6 +17,7 @@ export function handleExpectingDataItemMode(
 		state.iterationState.return();
 		return;
 	}
+	
 	const byte = state.currentBuffer[state.index];
 
 	if (byte === BREAK_BYTE) {
@@ -65,29 +66,14 @@ export function handleExpectingDataItemMode(
 		state.numberValue = state.additionalInfo;
 		state.argumentBytes = new Uint8Array();
 		flushHeaderAndArgument(state);
-	}
-	if (state.additionalInfo == AdditionalInfo.Length1) {
-		state.numberOfBytesToRead = 1;
-	}
-	if (state.additionalInfo == AdditionalInfo.Length2) {
-		state.numberOfBytesToRead = 2;
-	}
-	if (state.additionalInfo == AdditionalInfo.Length4) {
-		state.numberOfBytesToRead = 4;
-	}
-	if (state.additionalInfo == AdditionalInfo.Length8) {
-		state.numberValue = 0n;
-		state.numberOfBytesToRead = 8;
-	}
-	state.argumentBytes = new Uint8Array(state.numberOfBytesToRead);
-	if (reservedAddionalInfo.includes(state.additionalInfo)) {
-		throw new Error(
-			`AdditionalInfo cannot be ${state.additionalInfo}, reserved values are: ${
-				serialize(reservedAddionalInfo)
-			}`,
-		);
-	}
-	if (state.additionalInfo == AdditionalInfo.IndefiniteLength) {
+	} else if (
+		state.additionalInfo >= AdditionalInfo.Length1 &&
+		state.additionalInfo <= AdditionalInfo.Length8
+	) {
+		state.numberOfBytesToRead = 2 **
+			(state.additionalInfo - AdditionalInfo.Length1);
+		state.argumentBytes = new Uint8Array(state.numberOfBytesToRead);
+	} else if (state.additionalInfo == AdditionalInfo.IndefiniteLength) {
 		state.numberOfBytesToRead = 0;
 		if (state.majorType == MajorTypes.ByteString) {
 			state.mode = Mode.ExpectingDataItem;
@@ -128,12 +114,20 @@ export function handleExpectingDataItemMode(
 				`Major Type ${state.majorType} cannot be isIndefinite`,
 			);
 		}
+	} else if (
+		state.additionalInfo >= RESERVED_MIN &&
+		state.additionalInfo <= RESERVED_MAX
+	) {
+		throw new Error(
+			`AdditionalInfo cannot be ${state.additionalInfo}, reserved values are between: ${RESERVED_MIN} and ${RESERVED_MAX}`,
+		);
 	} else {
-		while (
-			state.numberOfBytesToRead > 0 &&
-			state.index < state.currentBuffer.length
-		) {
-			handleReadingArgumentMode(state);
-		}
+		throw new Error(`Unexpected additional info: ${state.additionalInfo}`);
+	}
+	while (
+		state.numberOfBytesToRead > 0 &&
+		state.index < state.currentBuffer.length
+	) {
+		handleReadingArgumentMode(state);
 	}
 }
