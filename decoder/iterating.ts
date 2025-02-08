@@ -48,8 +48,9 @@ function handleDecoderIteration(
 	iterationState: DecoderIterationState,
 ) {
 	readerState.iterationState = iterationState;
-	if (refreshBuffer(readerState, iterationState)) {
-		return;
+	const maybePromise = refreshBuffer(readerState, iterationState);
+	if (maybePromise) {
+		return maybePromise;
 	}
 	handleDecoderIterationData(readerState);
 }

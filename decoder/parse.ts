@@ -101,8 +101,7 @@ export function transformDecoder<Decoder extends DecoderLike>(
 			},
 		};
 
-		while (state.pulled.length > 0) {
-			const result = state.pulled.shift()!;
+		return state.pullImmediate((result) => {
 			const { done, value: event } = result;
 			if (done) {
 				if (stack.length > 0) {
@@ -116,8 +115,7 @@ export function transformDecoder<Decoder extends DecoderLike>(
 				return;
 			}
 			handleEvent(state, control, event);
-		}
-		state.pull();
+		});
 	}
 
 	if (SyncDecoderSymbol in decoder) {

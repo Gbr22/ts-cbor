@@ -7,12 +7,16 @@ type SyncPullFn<PullValue = unknown, PullArgs extends any[] = never[]> = (
 export type IterationState<
 	Yield = unknown,
 	PullValue = unknown,
-	PullArgs extends any[] = never[],
+	PullArgs extends any[] = [],
 	Return = void,
 > = {
 	enqueue: (...values: Yield[]) => void;
 	pulled: PullValue[];
 	pull: (...args: PullArgs) => void;
+	pullImmediate: (
+		fn: (value: PullValue) => void,
+		...args: PullArgs
+	) => Promise<void> | void;
 	return: (value: Return) => void;
 };
 export const IterationControlType = Object.freeze({
@@ -42,7 +46,7 @@ export class IterationControl<Yield, Exit> {
 	>(
 		iterate: (
 			state: IterationState<Yield, PullValue, PullArgs, Return>,
-		) => Promise<void> | void,
+		) => Promise<unknown> | unknown,
 		pullFn: AsyncPullFn<PullValue, PullArgs> = (() => {}) as AsyncPullFn<
 			PullValue,
 			PullArgs
@@ -59,6 +63,10 @@ export class IterationControl<Yield, Exit> {
 			pulled: [],
 			pull: (...args) => {
 				pullQueue.push([...args] as PullArgs);
+			},
+			pullImmediate: async (fn, ...args) => {
+				const result = await pullFn(...args);
+				fn(result);
 			},
 			return: (value: Return) => {
 				returnValue = value;
@@ -101,7 +109,7 @@ export class IterationControl<Yield, Exit> {
 	>(
 		iterate: (
 			state: IterationState<Yield, PullValue, PullArgs, Return>,
-		) => Promise<void> | void,
+		) => Promise<unknown> | unknown,
 		pullFn:
 			| SyncPullFn<PullValue, PullArgs>
 			| AsyncPullFn<PullValue, PullArgs> = (() => {}) as SyncPullFn<
@@ -120,6 +128,15 @@ export class IterationControl<Yield, Exit> {
 			pulled: [],
 			pull: (...args) => {
 				pullQueue.push([...args] as PullArgs);
+			},
+			pullImmediate: (fn, ...args) => {
+				const result = pullFn(...args);
+				if (result instanceof Promise) {
+					throw new Error(
+						"Cannot use async pull function in sync iterator",
+					);
+				}
+				fn(result);
 			},
 			return: (value: Return) => {
 				returnValue = value;

@@ -20,7 +20,7 @@ export function decodeUint(array: Uint8Array): number | bigint {
 		return new DataView(array.buffer).getUint16(0);
 	}
 	if (array.length == 1) {
-		return new DataView(array.buffer).getUint8(0);
+		return array[0];
 	}
 	throw new Error(
 		`Could not decode Uint, invalid number of bytes: ${array.length}`,
