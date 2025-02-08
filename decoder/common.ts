@@ -78,7 +78,6 @@ export type ReaderState = {
 	numberOfBytesToRead: number;
 	numberValue: number | bigint;
 	argumentBytes: Uint8Array;
-	isIndefinite: boolean;
 	byteArrayNumberOfBytesToRead: number;
 	unsafeTextSlice: Uint8Array | null;
 	itemsToRead: (number | bigint)[];
@@ -94,14 +93,13 @@ export function createReaderState(): ReaderState {
 		isReaderDone: false,
 		currentBuffer: new Uint8Array(),
 		mode: Mode.ExpectingDataItem,
-		subMode: NaN,
+		subMode: 0,
 		index: 0,
-		majorType: NaN,
-		additionalInfo: NaN,
+		majorType: 0,
+		additionalInfo: 0,
 		numberOfBytesToRead: 0,
 		numberValue: 0,
 		argumentBytes: new Uint8Array(),
-		isIndefinite: false,
 		byteArrayNumberOfBytesToRead: 0,
 		unsafeTextSlice: null,
 		itemsToRead: [],

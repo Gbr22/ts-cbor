@@ -41,6 +41,8 @@ export const AdditionalInfo = Object.freeze({
 	IndefiniteLength: 31,
 });
 
+export const BREAK_BYTE = 0xFF;
+
 export function serialize(unknown: unknown): string {
 	if (unknown === undefined) {
 		return "undefined";

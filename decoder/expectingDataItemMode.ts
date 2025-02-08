@@ -1,4 +1,4 @@
-import { AdditionalInfo, MajorTypes } from "../common.ts";
+import { AdditionalInfo, BREAK_BYTE, MajorTypes } from "../common.ts";
 import { Mode, type ReaderState, SubMode } from "./common.ts";
 import {
 	DecoderEventTypes,
@@ -18,6 +18,41 @@ export function handleExpectingDataItemMode(
 		return;
 	}
 	const byte = state.currentBuffer[state.index];
+
+	if (byte === BREAK_BYTE) {
+		state.mode = Mode.ExpectingDataItem;
+		if (state.subMode == SubMode.ReadingIndefiniteByteString) {
+			state.yieldEndOfDataItem(
+				{
+					eventType: DecoderEventTypes.End,
+					majorType: MajorTypes.ByteString,
+				} satisfies EndEventData,
+			);
+		} else if (state.subMode == SubMode.ReadingIndefiniteTextString) {
+			state.yieldEndOfDataItem(
+				{
+					eventType: DecoderEventTypes.End,
+					majorType: MajorTypes.TextString,
+				} satisfies EndEventData,
+			);
+		} else if (
+			state.itemsToRead.length > 0 &&
+			state.itemsToRead[state.itemsToRead.length - 1] === Infinity
+		) {
+			state.itemsToRead.pop();
+			const type = state.hierarchy.pop()!;
+			state.yieldEndOfDataItem(
+				{
+					eventType: DecoderEventTypes.End,
+					majorType: type as EndEventData["majorType"],
+				} satisfies EndEventData,
+			);
+		} else {
+			throw new Error(`Unexpected stop code`);
+		}
+		return;
+	}
+
 	state.index++;
 
 	state.majorType = byte >>> 5;
@@ -25,7 +60,6 @@ export function handleExpectingDataItemMode(
 	state.additionalInfo = byte & 0b11111;
 	state.numberValue = 0;
 	state.numberOfBytesToRead = 0;
-	state.isIndefinite = false;
 
 	if (state.additionalInfo < AdditionalInfo.Length1) {
 		state.numberValue = state.additionalInfo;
@@ -54,7 +88,6 @@ export function handleExpectingDataItemMode(
 		);
 	}
 	if (state.additionalInfo == AdditionalInfo.IndefiniteLength) {
-		state.isIndefinite = true;
 		state.numberOfBytesToRead = 0;
 		if (state.majorType == MajorTypes.ByteString) {
 			state.mode = Mode.ExpectingDataItem;
@@ -76,37 +109,6 @@ export function handleExpectingDataItemMode(
 					majorType: MajorTypes.TextString,
 				} satisfies StartEventData,
 			);
-		} else if (state.majorType == MajorTypes.SimpleValue) {
-			state.mode = Mode.ExpectingDataItem;
-			if (state.subMode == SubMode.ReadingIndefiniteByteString) {
-				state.yieldEndOfDataItem(
-					{
-						eventType: DecoderEventTypes.End,
-						majorType: MajorTypes.ByteString,
-					} satisfies EndEventData,
-				);
-			} else if (state.subMode == SubMode.ReadingIndefiniteTextString) {
-				state.yieldEndOfDataItem(
-					{
-						eventType: DecoderEventTypes.End,
-						majorType: MajorTypes.TextString,
-					} satisfies EndEventData,
-				);
-			} else if (
-				state.itemsToRead.length > 0 &&
-				state.itemsToRead[state.itemsToRead.length - 1] === Infinity
-			) {
-				state.itemsToRead.pop();
-				const type = state.hierarchy.pop()!;
-				state.yieldEndOfDataItem(
-					{
-						eventType: DecoderEventTypes.End,
-						majorType: type as EndEventData["majorType"],
-					} satisfies EndEventData,
-				);
-			} else {
-				throw new Error(`Unexpected stop code`);
-			}
 		} else if (
 			state.majorType == MajorTypes.Array ||
 			state.majorType == MajorTypes.Map
