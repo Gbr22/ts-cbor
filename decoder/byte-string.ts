@@ -1,5 +1,6 @@
 import { MajorTypes } from "../common.ts";
 import { IterationControl, type IterationState } from "../iteration-control.ts";
+import { checkCollectionEnd } from "./collection.ts";
 import {
 	type AsyncDecoderLike,
 	AsyncDecoderSymbol,
@@ -10,23 +11,15 @@ import {
 	type SyncDecoderLike,
 	SyncDecoderSymbol,
 } from "./common.ts";
-import {
-	type DataEventData,
-	type DecoderEvent,
-	DecoderEventTypes,
-	type EndEventData,
-} from "./events.ts";
+import { type DecoderEvent, DecoderEventTypes } from "./events.ts";
 import type { IteratorPullResult } from "./iterating.ts";
 
 function checkStringEnd(state: ReaderState) {
 	if (state.byteArrayNumberOfBytesToRead <= 0) {
 		state.mode = Mode.ExpectingDataItem;
-		state.yieldEndOfDataItem(
-			{
-				eventType: DecoderEventTypes.End,
-				majorType: MajorTypes.ByteString,
-			} satisfies EndEventData,
-		);
+		state.getHandlers().onEnd(state.control);
+		state.handlerHierarchy.pop();
+		checkCollectionEnd(state);
 	}
 	if (state.isReaderDone) {
 		throw new Error(
@@ -42,13 +35,7 @@ export function handleByteStringData(state: ReaderState) {
 	state.index += state.byteArrayNumberOfBytesToRead;
 	state.byteArrayNumberOfBytesToRead -= slice.length;
 	if (slice.length > 0) {
-		state.enqueueEventData(
-			{
-				eventType: DecoderEventTypes.Data,
-				majorType: MajorTypes.ByteString,
-				data: slice,
-			} satisfies DataEventData,
-		);
+		state.getHandlers().onItem(state.control, slice);
 		checkStringEnd(state);
 	}
 }

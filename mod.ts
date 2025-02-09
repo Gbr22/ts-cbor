@@ -5,6 +5,8 @@ export {
 	bigNumDecodingHandler,
 	byteStringDecodingHandler,
 	defaultDecodingHandlers,
+	defaultEventDecodingHandlers,
+	defaultValueDecodingHandlers,
 	mapDecodingHandler,
 	mapOrObjectDecodingHandler,
 	numberDecodingHandler,
@@ -38,8 +40,9 @@ export {
 } from "./decoder/simple-value.ts";
 export {
 	decodeFloat,
+	decodeNInt,
 	decodeNumberEvent,
-	decodeUint,
+	decodeUInt,
 	isFloatEvent,
 	isIntegerEvent,
 	isNumberEvent,

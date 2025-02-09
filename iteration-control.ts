@@ -124,6 +124,9 @@ export class IterationControl<Yield, Exit> {
 				fn(result);
 			},
 			return: (value: Return) => {
+				if (hasReturn) {
+					throw new Error("Already have a return value");
+				}
 				returnValue = value;
 				hasReturn = true;
 			},

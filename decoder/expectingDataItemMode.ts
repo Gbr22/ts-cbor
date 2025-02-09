@@ -1,10 +1,6 @@
 import { AdditionalInfo, BREAK_BYTE, MajorTypes } from "../common.ts";
+import { checkCollectionEnd } from "./collection.ts";
 import { Mode, type ReaderState, SubMode } from "./common.ts";
-import {
-	DecoderEventTypes,
-	type EndEventData,
-	type StartEventData,
-} from "./events.ts";
 import { flushHeaderAndArgument } from "./header.ts";
 import { handleReadingArgumentMode } from "./readingArgumentMode.ts";
 
@@ -14,40 +10,21 @@ export function handleExpectingDataItemMode(
 	state: ReaderState,
 ) {
 	if (state.isReaderDone) {
-		state.iterationState.return();
-		return;
+		throw new Error(`Unexpected end of stream`);
 	}
 
 	const byte = state.currentBuffer[state.index];
 
 	if (byte === BREAK_BYTE) {
 		state.mode = Mode.ExpectingDataItem;
-		if (state.subMode == SubMode.ReadingIndefiniteByteString) {
-			state.yieldEndOfDataItem(
-				{
-					eventType: DecoderEventTypes.End,
-					majorType: MajorTypes.ByteString,
-				} satisfies EndEventData,
-			);
-		} else if (state.subMode == SubMode.ReadingIndefiniteTextString) {
-			state.yieldEndOfDataItem(
-				{
-					eventType: DecoderEventTypes.End,
-					majorType: MajorTypes.TextString,
-				} satisfies EndEventData,
-			);
-		} else if (
-			state.itemsToRead.length > 0 &&
-			state.itemsToRead[state.itemsToRead.length - 1] === Infinity
+		if (
+			state.handlerHierarchy.length > 0 &&
+			state.handlerHierarchy[state.handlerHierarchy.length - 1]
+					.itemsToRead === Infinity
 		) {
-			state.itemsToRead.pop();
-			const type = state.hierarchy.pop()!;
-			state.yieldEndOfDataItem(
-				{
-					eventType: DecoderEventTypes.End,
-					majorType: type as EndEventData["majorType"],
-				} satisfies EndEventData,
-			);
+			state.getHandlers().onEnd(state.control);
+			state.handlerHierarchy.pop();
+			checkCollectionEnd(state);
 		} else {
 			throw new Error(`Unexpected stop code`);
 		}
@@ -78,37 +55,43 @@ export function handleExpectingDataItemMode(
 		if (state.majorType == MajorTypes.ByteString) {
 			state.mode = Mode.ExpectingDataItem;
 			state.subMode = SubMode.ReadingIndefiniteByteString;
-			state.enqueueEventData(
-				{
-					eventType: DecoderEventTypes.Start,
-					length: undefined,
-					majorType: MajorTypes.ByteString,
-				} satisfies StartEventData,
-			);
+			state.handlerHierarchy.push({
+				handler: state.getHandlers().onIndefiniteByteString(
+					state.control,
+				),
+				itemsToRead: Infinity,
+			});
 		} else if (state.majorType == MajorTypes.TextString) {
 			state.mode = Mode.ExpectingDataItem;
 			state.subMode = SubMode.ReadingIndefiniteTextString;
-			state.enqueueEventData(
-				{
-					eventType: DecoderEventTypes.Start,
-					length: undefined,
-					majorType: MajorTypes.TextString,
-				} satisfies StartEventData,
-			);
+			state.handlerHierarchy.push({
+				handler: state.getHandlers().onIndefiniteTextString(
+					state.control,
+				),
+				itemsToRead: Infinity,
+			});
 		} else if (
 			state.majorType == MajorTypes.Array ||
 			state.majorType == MajorTypes.Map
 		) {
 			state.mode = Mode.ExpectingDataItem;
-			state.hierarchy.push(state.majorType);
-			state.itemsToRead.push(Infinity);
-			state.enqueueEventData(
-				{
-					eventType: DecoderEventTypes.Start,
-					length: undefined,
-					majorType: state.majorType,
-				} satisfies StartEventData,
-			);
+			if (state.majorType == MajorTypes.Array) {
+				state.handlerHierarchy.push({
+					handler: state.getHandlers().onArray(
+						state.control,
+						undefined,
+					),
+					itemsToRead: Infinity,
+				});
+			} else if (state.majorType == MajorTypes.Map) {
+				state.handlerHierarchy.push({
+					handler: state.getHandlers().onMap(
+						state.control,
+						undefined,
+					),
+					itemsToRead: Infinity,
+				});
+			}
 		} else {
 			throw new Error(
 				`Major Type ${state.majorType} cannot be isIndefinite`,

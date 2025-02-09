@@ -5,6 +5,7 @@ import {
 	type AsyncDecoder,
 	AsyncDecoderSymbol,
 	createReaderState,
+	type DecodingHandlers,
 	type MapIterableToDecoder,
 	Mode,
 	type ReaderState,
@@ -40,7 +41,8 @@ export type IteratorPullResult<T> = {
 export type DecoderIterationState = IterationState<
 	DecoderEvent,
 	IteratorPullResult<Uint8Array>,
-	never[]
+	never[],
+	unknown
 >;
 
 function handleDecoderIteration(
@@ -56,19 +58,30 @@ function handleDecoderIteration(
 }
 
 export function decoderFromIterable<I extends AnyIterable<Uint8Array>>(
+	handlers: DecodingHandlers,
 	iterable: I,
 ): MapIterableToDecoder<I> {
-	const readerState = createReaderState();
+	const readerState = createReaderState({
+		handlers,
+	});
 	if (Symbol.iterator in iterable) {
 		const it = iterable[Symbol.iterator]();
 		const pull = it.next.bind(it) as () => IteratorPullResult<Uint8Array>;
-		const events = () => {
+		const createEvents = () => {
 			return IterationControl.createSyncIterator<
 				DecoderEvent,
 				IteratorPullResult<Uint8Array>,
-				never[]
+				never[],
+				unknown
 			>(handleDecoderIteration.bind(null, readerState), pull)
 				[Symbol.iterator]();
+		};
+		let eventsValue: ReturnType<typeof createEvents> | undefined;
+		const events = () => {
+			if (!eventsValue) {
+				eventsValue = createEvents();
+			}
+			return eventsValue;
 		};
 		const decoder: SyncDecoder = {
 			events,
@@ -83,13 +96,21 @@ export function decoderFromIterable<I extends AnyIterable<Uint8Array>>(
 		const pull = it.next.bind(it) as () => Promise<
 			IteratorPullResult<Uint8Array>
 		>;
-		const events = () => {
+		const createEvents = () => {
 			return IterationControl.createAsyncIterator<
 				DecoderEvent,
 				IteratorPullResult<Uint8Array>,
-				never[]
+				never[],
+				unknown
 			>(handleDecoderIteration.bind(null, readerState), pull)
 				[Symbol.asyncIterator]();
+		};
+		let eventsValue: ReturnType<typeof createEvents> | undefined;
+		const events = () => {
+			if (!eventsValue) {
+				eventsValue = createEvents();
+			}
+			return eventsValue;
 		};
 		const decoder: AsyncDecoder = {
 			events,
@@ -105,7 +126,8 @@ export function decoderFromIterable<I extends AnyIterable<Uint8Array>>(
 }
 
 export function decoderFromStream(
+	handlers: DecodingHandlers,
 	stream: ReadableStream<Uint8Array>,
 ): AsyncDecoder {
-	return decoderFromIterable(stream);
+	return decoderFromIterable(handlers, stream);
 }

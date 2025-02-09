@@ -13,6 +13,7 @@ import {
 } from "../../test_utils.ts";
 import { collect, iterableToStream } from "../../utils.ts";
 import { intoAsyncWriter } from "../../encoder.ts";
+import { defaultEventDecodingHandlers } from "../../decoder/handlers.ts";
 
 Deno.test(async function textStringIdentityTest() {
 	await assertWriteReadIdentity("Helló világ");
@@ -29,7 +30,10 @@ Deno.test(async function textStringStreamIdentityTest() {
 	const writer = intoAsyncWriter(writerStream.getWriter());
 	await writeTextStream(writer, stream);
 	const writeResult = await getBytes();
-	const decoder = decoderFromStream(bytesToStream(writeResult));
+	const decoder = decoderFromStream(
+		defaultEventDecodingHandlers,
+		bytesToStream(writeResult),
+	);
 	const event = await assertNext(decoder.events());
 	assertEquals(
 		event.eventData.eventType,

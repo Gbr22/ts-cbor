@@ -19,6 +19,7 @@ import {
 	byteWritableStream,
 } from "../../test_utils.ts";
 import { MajorTypes } from "../../common.ts";
+import { defaultEventDecodingHandlers } from "../../decoder/handlers.ts";
 
 Deno.test(async function simpleValueNumericIdentityTest() {
 	for (let index = 0; index <= 255; index++) {
@@ -32,7 +33,10 @@ Deno.test(async function simpleValueNumericIdentityTest() {
 		await writeSimpleValue(writer, simpleValue);
 		await writer.close();
 		const writeResult = await getBytes();
-		const decoder = decoderFromStream(bytesToStream(writeResult));
+		const decoder = decoderFromStream(
+			defaultEventDecodingHandlers,
+			bytesToStream(writeResult),
+		);
 		const next = await assertNext(decoder.events());
 		assertEquals(
 			next.eventData.eventType,

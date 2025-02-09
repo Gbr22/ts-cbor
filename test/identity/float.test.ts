@@ -21,6 +21,7 @@ import {
 import { assertAlmostEquals } from "@std/assert/almost-equals";
 import { intoAsyncWriter } from "../../encoder.ts";
 import { MajorTypes } from "../../common.ts";
+import { defaultEventDecodingHandlers } from "../../decoder/handlers.ts";
 
 async function floatTest(
 	writeFloat: (writer: AsyncWriter, value: number) => Promise<void>,
@@ -32,7 +33,10 @@ async function floatTest(
 	await writeFloat(writer, value);
 	await writer.close();
 	const writeResult = await getBytes();
-	const decoder = decoderFromStream(bytesToStream(writeResult));
+	const decoder = decoderFromStream(
+		defaultEventDecodingHandlers,
+		bytesToStream(writeResult),
+	);
 	const next = await assertNext(decoder.events());
 	assertEquals(
 		next.eventData.eventType,

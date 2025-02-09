@@ -1,24 +1,22 @@
 import type { ReaderState } from "./common.ts";
-import { DecoderEventTypes, type EndEventData } from "./events.ts";
 
 export function checkCollectionEnd(state: ReaderState) {
-	if (state.itemsToRead.length <= 0) {
+	if (state.handlerHierarchy.length <= 0) {
 		return [];
 	}
 
 	while (true) {
-		if (state.itemsToRead.length === 0) {
+		if (state.handlerHierarchy.length === 0) {
 			break;
 		}
-		state.itemsToRead[state.itemsToRead.length - 1]--;
-		if (state.itemsToRead[state.itemsToRead.length - 1] > 0) {
+		state.handlerHierarchy[state.handlerHierarchy.length - 1].itemsToRead--;
+		if (
+			state.handlerHierarchy[state.handlerHierarchy.length - 1]
+				.itemsToRead > 0
+		) {
 			break;
 		}
-		const type = state.hierarchy.pop();
-		state.itemsToRead.pop();
-		state.enqueueEventData({
-			eventType: DecoderEventTypes.End,
-			majorType: type as EndEventData["majorType"],
-		});
+		state.getHandlers().onEnd(state.control);
+		state.handlerHierarchy.pop();
 	}
 }

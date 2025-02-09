@@ -3,15 +3,18 @@ import {
 	type AsyncDecoderLike,
 	AsyncDecoderSymbol,
 	type DecoderLike,
+	type DecodingHandlers,
 	type MapDecoderToIterableIterator,
 	type MapDecoderToReturnType,
 	type SyncDecoder,
-	type SyncDecoderLike,
 	SyncDecoderSymbol,
 } from "./common.ts";
 import { serialize } from "../common.ts";
 import { IterationControl } from "../iteration-control.ts";
-import { defaultDecodingHandlers } from "./handlers.ts";
+import {
+	defaultDecodingHandlers,
+	defaultValueDecodingHandlers,
+} from "./handlers.ts";
 import { type DecoderEvent, DecoderEventTypes } from "./events.ts";
 import { decoderFromIterable } from "./iterating.ts";
 import type { IterationState } from "../iteration-control.ts";
@@ -156,57 +159,26 @@ export function transformDecoder<Decoder extends DecoderLike>(
 
 export function parseDecoder<Decoder extends DecoderLike>(
 	decoder: Decoder,
-	handlers: DecodingHandler[] = defaultDecodingHandlers,
 ): MapDecoderToReturnType<DecoderLike, unknown> {
 	if (SyncDecoderSymbol in decoder) {
-		let hasValue = false;
-		let value: unknown;
-		for (
-			const item of transformDecoder(decoder as SyncDecoderLike, handlers)
-		) {
-			if (hasValue) {
-				throw new Error(
-					`Unexpected item; end of stream expected. Item is: ${
-						serialize(item)
-					}`,
-				);
+		const it = decoder[SyncDecoderSymbol].events();
+		while (true) {
+			const { done, value: item } = it.next();
+			if (done) {
+				return item as MapDecoderToReturnType<DecoderLike, unknown>;
 			}
-			value = item;
-			hasValue = true;
 		}
-		if (hasValue) {
-			return value as MapDecoderToReturnType<DecoderLike, unknown>;
-		}
-		throw new Error("Expected item");
 	}
 	if (AsyncDecoderSymbol in decoder) {
-		const fn = async function (): Promise<
-			MapDecoderToReturnType<DecoderLike, unknown>
-		> {
-			let hasValue = false;
-			let value: unknown;
-			for await (
-				const item of transformDecoder(
-					decoder as AsyncDecoderLike,
-					handlers,
-				)
-			) {
-				if (hasValue) {
-					throw new Error(
-						`Unexpected item; end of stream expected. Item is: ${
-							serialize(item)
-						}`,
-					);
+		return (async function() {
+			const it = decoder[AsyncDecoderSymbol].events();
+			while (true) {
+				const { done, value: item } = await it.next();
+				if (done) {
+					return item as MapDecoderToReturnType<DecoderLike, unknown>;
 				}
-				value = item;
-				hasValue = true;
 			}
-			if (hasValue) {
-				return value as MapDecoderToReturnType<DecoderLike, unknown>;
-			}
-			throw new Error("Expected item");
-		};
-		return fn();
+		})();
 	}
 	throw new Error("Decoder is neither sync nor async");
 }
@@ -220,25 +192,28 @@ export function decodeValue<
 	V extends Uint8Array | Iterable<Uint8Array> | AsyncIterable<Uint8Array>,
 >(
 	value: V,
-	decodingHandlers: DecodingHandler[] = defaultDecodingHandlers,
+	decodingHandlers: DecodingHandlers = defaultValueDecodingHandlers,
 ): MapDecoderToReturnType<MapValueToDecoder<V>, unknown> {
 	type R = MapDecoderToReturnType<MapValueToDecoder<V>, unknown>;
 	if (value instanceof Uint8Array) {
 		return parseDecoder(
-			decoderFromIterable([value]),
-			decodingHandlers,
+			decoderFromIterable(decodingHandlers, [value]),
 		) as R;
 	}
 	if (Symbol.iterator in value) {
 		return parseDecoder(
-			decoderFromIterable(value as Iterable<Uint8Array>),
-			decodingHandlers,
+			decoderFromIterable(
+				decodingHandlers,
+				value as Iterable<Uint8Array>,
+			),
 		) as R;
 	}
 	if (Symbol.asyncIterator in value) {
 		return parseDecoder(
-			decoderFromIterable(value as AsyncIterable<Uint8Array>),
-			decodingHandlers,
+			decoderFromIterable(
+				decodingHandlers,
+				value as AsyncIterable<Uint8Array>,
+			),
 		) as R;
 	}
 	throw new Error(

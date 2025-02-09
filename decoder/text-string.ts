@@ -1,5 +1,6 @@
 import { MajorTypes, serialize } from "../common.ts";
 import { IterationControl, type IterationState } from "../iteration-control.ts";
+import { checkCollectionEnd } from "./collection.ts";
 import {
 	type AsyncDecoderLike,
 	AsyncDecoderSymbol,
@@ -10,12 +11,7 @@ import {
 	type SyncDecoderLike,
 	SyncDecoderSymbol,
 } from "./common.ts";
-import {
-	type DataEventData,
-	type DecoderEvent,
-	DecoderEventTypes,
-	type EndEventData,
-} from "./events.ts";
+import { type DecoderEvent, DecoderEventTypes } from "./events.ts";
 import type { IteratorPullResult } from "./iterating.ts";
 
 const utf8LengthMapping = [
@@ -39,12 +35,9 @@ function checkStringEnd(state: ReaderState) {
 				}`,
 			);
 		}
-		state.yieldEndOfDataItem(
-			{
-				eventType: DecoderEventTypes.End,
-				majorType: MajorTypes.TextString,
-			} satisfies EndEventData,
-		);
+		state.getHandlers().onEnd(state.control);
+		state.handlerHierarchy.pop();
+		checkCollectionEnd(state);
 	}
 	if (state.isReaderDone) {
 		throw new Error(
@@ -120,13 +113,7 @@ export function handleTextStringData(state: ReaderState) {
 			safeSlice = viewOf.subarray(fromIndex, toIndex);
 		}
 
-		state.enqueueEventData(
-			{
-				eventType: DecoderEventTypes.Data,
-				majorType: MajorTypes.TextString,
-				data: safeSlice,
-			} satisfies DataEventData,
-		);
+		state.getHandlers().onItem(state.control, safeSlice);
 		checkStringEnd(state);
 	}
 }

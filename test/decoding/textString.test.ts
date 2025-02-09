@@ -6,6 +6,7 @@ import {
 } from "../../mod.ts";
 import { assertNext } from "../../test_utils.ts";
 import { collect, iterableToStream } from "../../utils.ts";
+import { defaultEventDecodingHandlers } from "../../decoder/handlers.ts";
 
 Deno.test(async function decodeUnicodeCodepointInMultipleChunksTest() {
 	const chunks = [
@@ -16,7 +17,7 @@ Deno.test(async function decodeUnicodeCodepointInMultipleChunksTest() {
 
 	const expectedText = "körte";
 	const stream: ReadableStream<Uint8Array> = iterableToStream(chunks);
-	const decoder = decoderFromStream(stream);
+	const decoder = decoderFromStream(defaultEventDecodingHandlers, stream);
 	const event = await assertNext(decoder.events());
 	assertEquals(
 		event.eventData.eventType,

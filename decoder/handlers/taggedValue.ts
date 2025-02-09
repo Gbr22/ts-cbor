@@ -1,6 +1,6 @@
 import { TaggedValue } from "../../common.ts";
 import { type DecoderEvent, isTagEvent, type TagEvent } from "../events.ts";
-import { decodeUint } from "../numbers.ts";
+import { decodeUInt } from "../numbers.ts";
 import type {
 	DecoderHandlerInstance,
 	DecodingControl,
@@ -17,14 +17,14 @@ export function createTaggedValueDecodingHandler(
 	const handler = {
 		match(event: DecoderEvent): event is TagEvent {
 			return isTagEvent(event) &&
-				matchTag(decodeUint(event.eventData.data));
+				matchTag(decodeUInt(event.eventData.data));
 		},
 		handle(
 			control: DecodingControl,
 			event: TagEvent,
 		): DecoderHandlerInstance {
 			const taggedValue = new TaggedValue<unknown>(
-				decodeUint(event.eventData.data),
+				decodeUInt(event.eventData.data),
 				undefined,
 			);
 			return {

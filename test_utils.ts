@@ -81,8 +81,7 @@ export async function assertNext<T>(
 }
 
 export async function parseTest(bytes: Uint8Array, value: unknown) {
-	const decoder = decoderFromStream(bytesToStream(bytes));
-	const result = await parseDecoder(decoder);
+	const result = await decodeValue(bytesToStream(bytes));
 	assertEquals(result, value, "Expect correct value");
 }
 
@@ -112,15 +111,18 @@ export async function assertWriteReadIdentityAsync(value: unknown) {
 	await writeValue(writer, value);
 	await writer.close();
 	const bytes = getBytes();
-	const decoder = decoderFromStream(bytesToStream(bytes));
-	const newValue = await parseDecoder(decoder);
+	const newValue = await decodeValue(bytesToStream(bytes));
 	assertEquals(newValue, value, "Expect value to be rewritten correctly");
 }
 
 export function assertWriteReadIdentitySync(value: unknown) {
 	const bytes = encodeValueSync(value);
 	const newValue = decodeValue(bytes);
-	assertEquals(newValue, value, `Expect value to be rewritten correctly`);
+	assertEquals(
+		newValue,
+		value,
+		`Expect sync value to be rewritten correctly`,
+	);
 }
 
 export async function assertWriteReadIdentity(value: unknown) {
@@ -143,11 +145,6 @@ export function byteWritableStream() {
 			},
 		}),
 	};
-}
-
-export function bytesToDecoder(bytes: Uint8Array) {
-	const decoder = decoderFromStream(bytesToStream(bytes));
-	return decoder;
 }
 
 export async function writeAndReturnBytes<
@@ -181,7 +178,6 @@ export async function writeThenAssertParsedValueEquals<
 	) => void,
 >(fn: Fn, args: DropFirst<Parameters<Fn>>, expected: unknown) {
 	const bytes = await writeAndReturnBytes(fn, args);
-	const decoder = decoderFromStream(bytesToStream(bytes));
-	const value = await parseDecoder(decoder);
+	const value = await decodeValue(bytesToStream(bytes));
 	assertEquals(value, expected, "Expect correct value");
 }
